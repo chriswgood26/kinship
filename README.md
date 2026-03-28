@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kinship EHR
 
-## Getting Started
+**A modern EHR for the rest of us.**
 
-First, run the development server:
+Kinship is a purpose-built Electronic Health Record platform for small and mid-size behavioral health, developmental disabilities, and community mental health agencies — the organizations that the big EHR vendors have left behind.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Vision
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The behavioral health and DD space is dominated by legacy systems built in the early 2000s. Small agencies — group homes, outpatient clinics, CCBHC providers, DD waiver programs — are forced to use software that was designed for a different era, at price points that don't fit their budgets, with implementation timelines measured in months.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Kinship changes that.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## What Makes Kinship Different
 
-## Learn More
+- **Built for small agencies** — not enterprise bloat, not a watered-down enterprise product
+- **Modern from day one** — TypeScript, Next.js, Supabase, designed for AI-assisted development
+- **Behavioral health + DD in one platform** — ISPs, eMAR, IM+CANS, incident reports, CCBHC compliance
+- **Fast implementation** — days, not months
+- **Configurable terminology** — Patient, Client, Individual, Recipient — your language, your culture
+- **Patient portal built in** — families, guardians, parole officers, case managers — all with role-based access
+- **Fair pricing** — subscription model that small agencies can actually afford
 
-To learn more about Next.js, take a look at the following resources:
+## Modules
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Patient/Client Management
+- Scheduling (individual + group)
+- Clinical Encounters + SOAP Notes
+- Treatment Plans
+- Individual Support Plans (ISP) — DD
+- IM+CANS Assessment
+- eMAR (Electronic Medication Administration)
+- DD Progress Notes
+- Incident Reports
+- Prior Authorizations
+- Billing + Claims (837P)
+- Patient Invoicing
+- Bed Management
+- CCBHC Compliance Dashboard
+- Reports + Analytics
+- Internal Messaging
+- Patient Portal
+- Document Management
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- **Frontend:** Next.js 15 (React) + TypeScript
+- **Database:** Supabase (PostgreSQL)
+- **Auth:** Clerk
+- **Styling:** Tailwind CSS
+- **Hosting:** Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Status
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+🚧 In active development — v0.1 launching 2026
+
+---
+
+*Built by Chris Goodbaudy*
