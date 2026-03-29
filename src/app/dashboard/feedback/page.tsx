@@ -78,10 +78,10 @@ export default function FeedbackPage() {
           {FEEDBACK_TYPES.map(t => (
             <button key={t.value} type="button" onClick={() => setType(t.value)}
               className={`flex flex-col items-start gap-1.5 p-4 rounded-2xl border-2 text-left transition-all ${
-                type === t.value ? t.color + " border-current" : "border-slate-200 hover:border-slate-300 bg-white"
+                type === t.value ? t.color + " border-current" : "border-slate-200 hover:border-slate-300 bg-white text-slate-900"
               }`}>
-              <span className="font-semibold text-sm">{t.label}</span>
-              <span className="text-xs opacity-70">{t.desc}</span>
+              <span className="font-semibold text-sm text-slate-900">{t.label}</span>
+              <span className="text-xs text-slate-500">{t.desc}</span>
             </button>
           ))}
         </div>
