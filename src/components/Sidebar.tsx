@@ -101,7 +101,22 @@ export default function Sidebar({ orgName, clientTermPlural = "Clients" }: Props
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-100">
+      <div className="px-4 py-3 border-t border-slate-100 space-y-2">
+        <button
+          onClick={() => {
+            const url = "https://kinshipehr.com";
+            const text = "Check out Kinship EHR — a modern EHR built for behavioral health and DD agencies. Simple pricing, no per-seat fees.";
+            if (navigator.share) {
+              navigator.share({ title: "Kinship EHR", text, url });
+            } else {
+              navigator.clipboard.writeText(`${text}\n${url}`);
+              alert("Link copied to clipboard!");
+            }
+          }}
+          className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-teal-600 border border-teal-200 rounded-xl py-2 hover:bg-teal-50 transition-colors"
+        >
+          🔗 Share Kinship EHR
+        </button>
         <div className="text-xs text-slate-400 text-center">Kinship EHR v0.1</div>
       </div>
     </div>
