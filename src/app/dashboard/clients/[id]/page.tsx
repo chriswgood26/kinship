@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CareTeam from "@/components/CareTeam";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
@@ -24,7 +25,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const { id } = await params;
 
   const [{ data: client }, { data: appointments }, { data: encounters }] = await Promise.all([
-    supabaseAdmin.from("clients").select("*").eq("id", id).single(),
+    supabaseAdmin.from("clients").select("*, primary_clinician:primary_clinician_id(id, first_name, last_name, credentials)").eq("id", id).single(),
     supabaseAdmin.from("appointments").select("*").eq("client_id", id).gte("appointment_date", new Date().toISOString().split("T")[0]).order("appointment_date").limit(3),
     supabaseAdmin.from("encounters").select("*").eq("client_id", id).order("encounter_date", { ascending: false }).limit(5),
   ]);

@@ -32,6 +32,7 @@ const NAV_SECTIONS = [
     items: [
       { href: "/dashboard/treatment-plans", label: "Treatment Plans", icon: "📋" },
       { href: "/dashboard/screenings", label: "Screenings", icon: "📊" },
+      { href: "/dashboard/supervisor", label: "Supervisor Review", icon: "✅" },
     ],
   },
   {
