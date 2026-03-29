@@ -237,3 +237,19 @@ select 'Schema created successfully' as status,
 from information_schema.tables
 where table_schema = 'public'
   and table_type = 'BASE TABLE';
+
+-- Screenings (PHQ-9, GAD-7, etc.)
+create table if not exists screenings (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id),
+  client_id uuid references clients(id) on delete cascade not null,
+  tool text not null, -- phq9, gad7
+  answers jsonb default '{}',
+  total_score int,
+  severity_label text,
+  administered_by text,
+  administered_by_clerk_id text,
+  administered_at timestamptz default now(),
+  notes text,
+  created_at timestamptz default now()
+);
