@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { PHQ9, GAD7, getSeverity } from "@/lib/screenings";
+import { CSSRS } from "@/lib/cssrs";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,12 @@ export default async function ScreeningsPage() {
             + PHQ-9
           </Link>
           <Link href="/dashboard/screenings/gad7/new"
-            className="bg-teal-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-400 text-sm">
+            className="border border-purple-200 text-purple-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-purple-50 text-sm">
             + GAD-7
+          </Link>
+          <Link href="/dashboard/screenings/cssrs/new"
+            className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 text-sm">
+            + C-SSRS
           </Link>
         </div>
       </div>
@@ -80,6 +85,23 @@ export default async function ScreeningsPage() {
             </Link>
           </div>
         ))}
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">C-SSRS</div>
+              <div className="text-sm text-slate-500">Columbia Suicide Severity Rating Scale</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">4 subscales · Ideation, Intensity, Behavior, Risk Level</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {["Low Risk", "Moderate Risk", "High Risk", "Imminent Risk"].map(l => (
+              <span key={l} className="text-xs bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full font-medium">{l}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/cssrs/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors">
+            Administer C-SSRS →
+          </Link>
+        </div>
       </div>
 
       {/* History */}
