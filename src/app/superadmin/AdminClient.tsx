@@ -153,7 +153,7 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                             {PLAN_LABELS[plan]}
                           </span>
                           {(org.addons?.length ?? 0) > 0 && (
-                            <div className="text-xs text-slate-400 mt-0.5">{org.addons.join(", ")}</div>
+                            <div className="text-xs text-slate-400 mt-0.5">{(org.addons || []).join(", ")}</div>
                           )}
                         </td>
                         <td className="px-4 py-3.5 text-sm text-slate-900 font-semibold">{users}</td>
