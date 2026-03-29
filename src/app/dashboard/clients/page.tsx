@@ -22,7 +22,7 @@ export default async function ClientsPage({
 
   let query = supabaseAdmin
     .from("clients")
-    .select("id, mrn, first_name, last_name, preferred_name, pronouns, date_of_birth, phone_primary, email, status, insurance_provider", { count: "exact" })
+    .select("id, mrn, first_name, last_name, preferred_name, pronouns, date_of_birth, phone_primary, email, status, insurance_provider, primary_clinician_name", { count: "exact" })
     .eq("organization_id", orgId || "")
     .order("last_name");
 
