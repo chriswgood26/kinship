@@ -158,16 +158,12 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-              {p.highlight && (
-                <a href="#waitlist" className="block text-center mt-4 bg-teal-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400">
-                  Get started →
-                </a>
-              )}
-              {p.enterprise && (
-                <a href="#waitlist" className="block text-center mt-4 bg-white text-slate-900 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-100">
-                  Inquire about pricing →
-                </a>
-              )}
+              <a href={`/?plan=${encodeURIComponent(p.name + " (" + p.price + "/mo)")}#waitlist`}
+                className={`block text-center mt-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                  p.highlight ? "bg-teal-500 text-white hover:bg-teal-400" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}>
+                {p.highlight ? "Get started →" : "Inquire →"}
+              </a>
             </div>
           ))}
         </div>
