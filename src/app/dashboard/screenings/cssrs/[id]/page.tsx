@@ -32,7 +32,7 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
         <Link href="/dashboard/assessments" className="text-slate-400 hover:text-slate-700">←</Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">C-SSRS Results</h1>
-          {patient && (
+          {clientData && (
             <Link href={`/dashboard/clients/${clientData.id}`} className="text-teal-600 text-sm font-medium hover:text-teal-700 mt-0.5 block">
               {clientData.last_name}, {clientData.first_name} · MRN: {clientData.mrn || "—"}
             </Link>
