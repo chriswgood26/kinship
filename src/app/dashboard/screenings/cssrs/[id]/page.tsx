@@ -63,7 +63,7 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
         <div className="px-5 py-4 border-b border-slate-100"><h2 className="font-semibold text-slate-900">Suicidal Ideation</h2></div>
         <div className="divide-y divide-slate-50">
           {CSSRS.ideation.questions.map((q, i) => {
-            const val = ideation[q.id];
+            const val = ideation[q.id as keyof typeof ideation] as boolean | undefined;
             if (val === undefined) return null;
             return (
               <div key={q.id} className={`flex items-start gap-3 px-5 py-3.5 ${val ? "bg-red-50/30" : ""}`}>
@@ -83,7 +83,7 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
         <div className="px-5 py-4 border-b border-slate-100"><h2 className="font-semibold text-slate-900">Suicidal Behavior (Past 3 months)</h2></div>
         <div className="divide-y divide-slate-50">
           {CSSRS.behavior.questions.map(q => {
-            const val = behavior[q.id];
+            const val = behavior[q.id as keyof typeof behavior] as boolean | undefined;
             if (val === undefined) return null;
             return (
               <div key={q.id} className={`flex items-start gap-3 px-5 py-3.5 ${val ? "bg-red-50/30" : ""}`}>
