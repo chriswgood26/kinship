@@ -150,7 +150,7 @@ export default function SupervisorReviewClient({ pendingNotes, reviewedNotes, su
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-slate-900 text-sm">
-                            {patient ? `${patient.last_name}, ${patient.first_name}${patient.preferred_name ? \` "${patient.preferred_name}"\` : ""}` : "—"}
+                            {patient ? `${patient.last_name}, ${patient.first_name}${patient.preferred_name ? ' "' + patient.preferred_name + '"' : ""}` : "—"}
                           </span>
                           <span className="text-slate-400 text-xs">MRN: {patient?.mrn || "—"}</span>
                         </div>
