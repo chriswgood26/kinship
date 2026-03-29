@@ -76,7 +76,7 @@ export default function SupervisorReviewClient({ pendingNotes, reviewedNotes, su
   const getPatient = (note: Note) => {
     const enc = Array.isArray(note.encounter) ? note.encounter[0] : note.encounter;
     const clientRecord = enc && (Array.isArray(enc.patient) ? enc.patient[0] : enc.patient);
-    return { enc, patient };
+    return { enc, patient: clientRecord };
   };
 
   return (
