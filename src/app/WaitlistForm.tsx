@@ -41,7 +41,7 @@ export default function WaitlistForm() {
       </div>
       <input value={form.agency_name} onChange={e => setForm(f => ({ ...f, agency_name: e.target.value }))} className={inputClass} placeholder="Agency name" />
       <div className="grid grid-cols-2 gap-3">
-        <select value={form.agency_type} onChange={e => setForm(f => ({ ...f, agency_type: e.target.value }))} className={inputClass + " bg-[#1a3260]"}>
+        <select value={form.agency_type} onChange={e => setForm(f => ({ ...f, agency_type: e.target.value }))} className={inputClass + " bg-white text-slate-900"}>
           <option value="">Agency type...</option>
           <option>Behavioral Health</option>
           <option>Developmental Disabilities</option>
@@ -50,7 +50,7 @@ export default function WaitlistForm() {
           <option>Residential</option>
           <option>Other</option>
         </select>
-        <select value={form.agency_size} onChange={e => setForm(f => ({ ...f, agency_size: e.target.value }))} className={inputClass + " bg-[#1a3260]"}>
+        <select value={form.agency_size} onChange={e => setForm(f => ({ ...f, agency_size: e.target.value }))} className={inputClass + " bg-white text-slate-900"}>
           <option value="">Agency size...</option>
           <option>1-5 staff</option>
           <option>6-15 staff</option>
