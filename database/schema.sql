@@ -253,3 +253,23 @@ create table if not exists screenings (
   notes text,
   created_at timestamptz default now()
 );
+
+-- Feedback
+create table if not exists feedback (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id),
+  submitted_by_clerk_id text,
+  submitted_by_name text,
+  submitted_by_email text,
+  type text not null default 'other', -- bug, feature, other
+  problem text,
+  impact text,
+  tried text,
+  ideal text,
+  status text default 'new', -- new, reviewed, planned, shipped, closed
+  admin_notes text,
+  created_at timestamptz default now()
+);
+
+-- Add addons column to organizations
+alter table organizations add column if not exists addons text[] default '{}';

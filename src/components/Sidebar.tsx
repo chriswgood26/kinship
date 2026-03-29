@@ -45,6 +45,7 @@ const NAV_SECTIONS = [
     label: "Admin",
     items: [
       { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
+      { href: "/dashboard/feedback", label: "Submit Feedback", icon: "💬" },
     ],
   },
 ];
