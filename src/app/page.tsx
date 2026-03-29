@@ -138,26 +138,42 @@ export default function HomePage() {
               color: "border-slate-200 bg-white",
               features: ["Everything in Practice", "Unlimited clients", "50GB storage", "Multi-location support", "Custom workflows", "Dedicated onboarding", "SLA guarantee"],
             },
-          ].map(p => (
+            {
+              name: "Enterprise",
+              price: "Custom",
+              annual: null,
+              desc: "50+ staff · Multi-site",
+              color: "border-slate-800 bg-slate-900",
+              enterprise: true,
+              features: ["Everything in Agency", "Unlimited staff & sites", "Custom integrations", "Clearinghouse connection", "ePrescribing (DoseSpot)", "Dedicated success manager", "Custom SLA & contracts", "HIPAA BAA included"],
+            },
+          ].map((p: {name: string; price: string; annual: string|null; desc: string; color: string; highlight?: boolean; enterprise?: boolean; features: string[]}) => (
             <div key={p.name} className={`rounded-2xl border p-5 ${p.color}`}>
               {p.highlight && <div className="text-xs font-bold text-teal-600 uppercase tracking-wide mb-2">Most Popular</div>}
-              <div className="font-bold text-slate-900 text-lg">{p.name}</div>
+              {p.enterprise && <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Enterprise</div>}
+              <div className={`font-bold text-lg ${p.enterprise ? "text-white" : "text-slate-900"}`}>{p.name}</div>
               <div className="mt-2">
-                <span className="text-3xl font-bold text-slate-900">{p.price}</span>
-                <span className="text-slate-400 text-xs">/mo</span>
+                <span className={`text-3xl font-bold ${p.enterprise ? "text-white" : "text-slate-900"}`}>{p.price}</span>
+                {!p.enterprise && <span className="text-slate-400 text-xs">/mo</span>}
               </div>
-              <div className="text-xs text-slate-400 mb-1">{p.annual}/yr (save 20%)</div>
-              <div className="text-xs font-semibold text-slate-600 mb-4 bg-slate-100 rounded-lg px-2 py-1 inline-block">{p.desc}</div>
+              {p.annual && <div className="text-xs text-slate-400 mb-1">{p.annual}/yr (save 20%)</div>}
+              {p.enterprise && <div className="text-xs text-slate-500 mb-1">Pricing based on scope</div>}
+              <div className={`text-xs font-semibold mb-4 rounded-lg px-2 py-1 inline-block ${p.enterprise ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"}`}>{p.desc}</div>
               <ul className="space-y-1.5">
                 {p.features.map(f => (
-                  <li key={f} className="flex items-start gap-2 text-xs text-slate-700">
-                    <span className="text-teal-500 flex-shrink-0 mt-0.5">✓</span>{f}
+                  <li key={f} className={`flex items-start gap-2 text-xs ${p.enterprise ? "text-slate-300" : "text-slate-700"}`}>
+                    <span className={`flex-shrink-0 mt-0.5 ${p.enterprise ? "text-slate-400" : "text-teal-500"}`}>✓</span>{f}
                   </li>
                 ))}
               </ul>
               {p.highlight && (
                 <a href="#waitlist" className="block text-center mt-4 bg-teal-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400">
                   Get started →
+                </a>
+              )}
+              {p.enterprise && (
+                <a href="mailto:hello@kinshipehr.com" className="block text-center mt-4 bg-white text-slate-900 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-100">
+                  Contact us for pricing →
                 </a>
               )}
             </div>
