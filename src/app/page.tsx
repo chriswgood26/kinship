@@ -97,30 +97,117 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Pricing preview */}
-      <div className="max-w-4xl mx-auto px-8 py-16">
-        <h2 className="text-3xl font-bold text-slate-900 text-center mb-4">Pricing that fits small agencies</h2>
-        <p className="text-slate-500 text-center mb-12">No 12-month contracts. No $50k implementation fees. No surprise costs.</p>
-        <div className="grid grid-cols-3 gap-5">
+      {/* Pricing */}
+      <div className="max-w-5xl mx-auto px-8 py-16">
+        <h2 className="text-3xl font-bold text-slate-900 text-center mb-3">Simple, transparent pricing</h2>
+        <p className="text-slate-500 text-center mb-3">Built for small agencies. No $50k implementation fees. No long-term contracts.</p>
+        <p className="text-slate-400 text-center text-sm mb-12">Save 20% with annual billing</p>
+
+        <div className="grid grid-cols-4 gap-4 mb-8">
           {[
-            { name: "Starter", price: "$149", per: "/mo", desc: "Up to 3 staff", features: ["Clients & scheduling", "Encounters & notes", "Basic billing", "Email support"] },
-            { name: "Growth", price: "$299", per: "/mo", desc: "Up to 10 staff", features: ["Everything in Starter", "Treatment plans", "CCBHC dashboard", "eMAR", "Patient portal", "Priority support"], highlight: true },
-            { name: "Practice", price: "$599", per: "/mo", desc: "Unlimited staff", features: ["Everything in Growth", "ISPs & DD workflows", "Advanced reporting", "Custom integrations", "Dedicated support"] },
+            {
+              name: "Starter",
+              price: "$149",
+              annual: "$1,430",
+              desc: "Up to 5 staff",
+              color: "border-slate-200 bg-white",
+              features: ["Clients & scheduling", "Encounters & SOAP notes", "Basic billing & charges", "Patient portal", "5GB document storage", "Email support"],
+            },
+            {
+              name: "Growth",
+              price: "$349",
+              annual: "$3,350",
+              desc: "Up to 15 staff",
+              color: "border-teal-500 bg-teal-50 shadow-lg",
+              highlight: true,
+              features: ["Everything in Starter", "Treatment plans", "CCBHC dashboard", "Supervisor review", "Assessments (PHQ-9, GAD-7, C-SSRS)", "20GB storage", "Priority support"],
+            },
+            {
+              name: "Practice",
+              price: "$599",
+              annual: "$5,750",
+              desc: "Up to 30 staff",
+              color: "border-slate-200 bg-white",
+              features: ["Everything in Growth", "eMAR & medications", "DD modules (ISP, incidents)", "Bed management", "Prior authorizations", "Advanced reporting", "Phone support"],
+            },
+            {
+              name: "Agency",
+              price: "$899",
+              annual: "$8,630",
+              desc: "Up to 50 staff",
+              color: "border-slate-200 bg-white",
+              features: ["Everything in Practice", "Unlimited clients", "50GB storage", "Multi-location support", "Custom workflows", "Dedicated onboarding", "SLA guarantee"],
+            },
           ].map(p => (
-            <div key={p.name} className={`rounded-2xl border p-6 ${p.highlight ? "border-teal-500 bg-teal-50 shadow-md" : "border-slate-200 bg-white"}`}>
+            <div key={p.name} className={`rounded-2xl border p-5 ${p.color}`}>
               {p.highlight && <div className="text-xs font-bold text-teal-600 uppercase tracking-wide mb-2">Most Popular</div>}
               <div className="font-bold text-slate-900 text-lg">{p.name}</div>
-              <div className="mt-2 mb-1"><span className="text-4xl font-bold text-slate-900">{p.price}</span><span className="text-slate-400 text-sm">{p.per}</span></div>
-              <div className="text-xs text-slate-400 mb-4">{p.desc}</div>
-              <ul className="space-y-2">
+              <div className="mt-2">
+                <span className="text-3xl font-bold text-slate-900">{p.price}</span>
+                <span className="text-slate-400 text-xs">/mo</span>
+              </div>
+              <div className="text-xs text-slate-400 mb-1">{p.annual}/yr (save 20%)</div>
+              <div className="text-xs font-semibold text-slate-600 mb-4 bg-slate-100 rounded-lg px-2 py-1 inline-block">{p.desc}</div>
+              <ul className="space-y-1.5">
                 {p.features.map(f => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="text-teal-500 flex-shrink-0">✓</span>{f}
+                  <li key={f} className="flex items-start gap-2 text-xs text-slate-700">
+                    <span className="text-teal-500 flex-shrink-0 mt-0.5">✓</span>{f}
                   </li>
                 ))}
               </ul>
+              {p.highlight && (
+                <a href="#waitlist" className="block text-center mt-4 bg-teal-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400">
+                  Get started →
+                </a>
+              )}
             </div>
           ))}
+        </div>
+
+        {/* Add-ons */}
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6">
+          <h3 className="font-semibold text-slate-900 mb-4">Optional Add-ons</h3>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { name: "CCBHC Module", price: "+$49/mo", desc: "Performance measures, compliance reporting" },
+              { name: "eMAR", price: "+$49/mo", desc: "Medication administration records" },
+              { name: "DD Modules", price: "+$49/mo", desc: "ISP, incident reports, DD workflows" },
+              { name: "SMS Reminders", price: "+$29/mo", desc: "Automated appointment reminders via text" },
+            ].map(a => (
+              <div key={a.name} className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="font-semibold text-slate-900 text-sm">{a.name}</div>
+                <div className="text-teal-600 font-bold text-sm mt-0.5">{a.price}</div>
+                <div className="text-xs text-slate-400 mt-1">{a.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Implementation */}
+        <div className="mt-4 bg-white rounded-2xl border border-slate-200 p-5 flex items-start gap-4">
+          <div className="text-2xl flex-shrink-0">🚀</div>
+          <div>
+            <div className="font-semibold text-slate-900">One-time implementation fee: $500–$2,500</div>
+            <div className="text-sm text-slate-500 mt-0.5">Includes data migration, staff training, and onboarding support. Most agencies are live within 5 business days.</div>
+          </div>
+        </div>
+
+        {/* vs competitors */}
+        <div className="mt-4 bg-teal-50 rounded-2xl border border-teal-100 p-5">
+          <div className="text-sm font-semibold text-teal-900 mb-2">How Kinship compares</div>
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            {[
+              { name: "Legacy DD/BH EHR", price: "$50k–$200k/yr", note: "Long implementation, legacy tech" },
+              { name: "SimplePractice", price: "$29–$99/clinician/mo", note: "Individual practitioners only" },
+              { name: "Kinship", price: "$149–$899/mo flat", note: "✓ Modern · Fast · Affordable" },
+            ].map(c => (
+              <div key={c.name} className={`rounded-xl p-3 ${c.name === "Kinship" ? "bg-teal-500 text-white" : "bg-white border border-slate-200"}`}>
+                <div className={`font-bold ${c.name === "Kinship" ? "text-white" : "text-slate-900"}`}>{c.name}</div>
+                <div className={`font-semibold mt-0.5 ${c.name === "Kinship" ? "text-teal-100" : "text-teal-600"}`}>{c.price}</div>
+                <div className={`mt-0.5 ${c.name === "Kinship" ? "text-teal-200" : "text-slate-400"}`}>{c.note}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
