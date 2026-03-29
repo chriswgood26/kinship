@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { RATING_OPTIONS, getScore, getSeverity, isSuicidalIdeation } from "@/lib/screenings";
+import { RATING_OPTIONS, getScore, isSuicidalIdeation } from "@/lib/screenings";
 
 interface Question { id: string; text: string; }
 interface Tool {
@@ -43,7 +43,8 @@ export default function ScreeningForm({ tool, prefilledClientId }: Props) {
   }, [clientSearch]);
 
   const totalScore = getScore(answers, tool.questions);
-  const severity = getSeverity(totalScore, tool);
+  const severityItem = tool.severity.find((s: {max: number}) => totalScore <= s.max) || tool.severity[tool.severity.length - 1];
+  const severity = severityItem as { max: number; label: string; color: string; recommendation: string };
   const allAnswered = tool.questions.every(q => answers[q.id] !== undefined);
   const hasSI = tool.id === "phq9" && isSuicidalIdeation(answers);
   const pctComplete = Math.round((Object.keys(answers).filter(k => tool.questions.some(q => q.id === k)).length / tool.questions.length) * 100);
