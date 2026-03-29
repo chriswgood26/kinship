@@ -7,10 +7,11 @@ import { RATING_OPTIONS, getScore, isSuicidalIdeation } from "@/lib/screenings";
 
 interface Question { id: string; text: string; }
 interface Tool {
-  id: string; name: string; fullName: string; instructions: string; maxScore: number;
+  id: string; name: string; fullName: string; description?: string; instructions: string; maxScore: number;
   questions: Question[];
   bonus?: { id: string; text: string; options: { value: number; label: string }[] };
   severity: { max: number; label: string; color: string; recommendation: string }[];
+  [key: string]: unknown;
 }
 interface Client { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null; }
 
