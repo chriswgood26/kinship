@@ -34,8 +34,7 @@ export default async function SupervisorPage({
   // Also get all clinicians in the org for admin view
   const { data: allClinicians } = await supabaseAdmin
     .from("user_profiles")
-    .select("id, first_name, last_name, credentials, role, clerk_user_id")
-    .eq("organization_id", profile?.organization_id || "")
+    .select("id, first_name, last_name, credentials, role, clerk_user_id, organization_id")
     .in("role", ["clinician", "supervisor"])
     .order("last_name");
 
