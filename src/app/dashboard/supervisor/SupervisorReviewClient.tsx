@@ -75,7 +75,7 @@ export default function SupervisorReviewClient({ pendingNotes, reviewedNotes, su
 
   const getPatient = (note: Note) => {
     const enc = Array.isArray(note.encounter) ? note.encounter[0] : note.encounter;
-    const patient = enc && (Array.isArray(enc.patient) ? enc.patient[0] : enc.patient);
+    const clientRecord = enc && (Array.isArray(enc.patient) ? enc.patient[0] : enc.patient);
     return { enc, patient };
   };
 
@@ -150,7 +150,7 @@ export default function SupervisorReviewClient({ pendingNotes, reviewedNotes, su
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-slate-900 text-sm">
-                            {patient ? `${patient.last_name}, ${patient.first_name}${patient.preferred_name ? ` "${patient.preferred_name}"` : ""}` : "—"}
+                            {patient ? `${client.last_name}, ${client.first_name}${client.preferred_name ? ` "${client.preferred_name}"` : ""}` : "—"}
                           </span>
                           <span className="text-slate-400 text-xs">MRN: {patient?.mrn || "—"}</span>
                         </div>
@@ -223,7 +223,7 @@ export default function SupervisorReviewClient({ pendingNotes, reviewedNotes, su
                   <div key={note.id} className="flex items-center gap-4 px-5 py-4">
                     <span className="text-emerald-500 text-lg flex-shrink-0">✓</span>
                     <div className="flex-1">
-                      <div className="font-medium text-sm text-slate-900">{patient ? `${patient.last_name}, ${patient.first_name}` : "—"}</div>
+                      <div className="font-medium text-sm text-slate-900">{patient ? `${client.last_name}, ${client.first_name}` : "—"}</div>
                       <div className="text-xs text-slate-400">{enc?.encounter_type} · {enc?.encounter_date}</div>
                     </div>
                     <div className="text-right text-xs text-slate-400 flex-shrink-0">

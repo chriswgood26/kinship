@@ -26,20 +26,20 @@ export default function ScreeningForm({ tool, prefilledClientId }: Props) {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState("");
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [form, setForm] = useState({ client_id: prefilledClientId || "", client_name: "", administered_by: "", notes: "" });
+  const [form, setForm] = useState({ client_id: prefilledClientId || "", patient_name: "", administered_by: "", notes: "" });
   const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     if (prefilledClientId) {
       fetch(`/api/clients/${prefilledClientId}`, { credentials: "include" }).then(r => r.json()).then(d => {
-        if (d.client) setForm(f => ({ ...f, client_id: d.client.id, client_name: `${d.client.last_name}, ${d.client.first_name}` }));
+        if (d.client) setForm(f => ({ ...f, client_id: d.client.id, patient_name: `${d.client.last_name}, ${d.client.first_name}` }));
       });
     }
   }, []);
 
   useEffect(() => {
     if (clientSearch.length >= 2) {
-      fetch(`/api/clients?q=${encodeURIComponent(clientSearch)}`, { credentials: "include" }).then(r => r.json()).then(d => setClients(d.clients || []));
+      fetch(`/api/clients/search?q=${encodeURIComponent(clientSearch)}`, { credentials: "include" }).then(r => r.json()).then(d => setClients(d.patients || []));
     } else setClients([]);
   }, [clientSearch]);
 
@@ -53,12 +53,12 @@ export default function ScreeningForm({ tool, prefilledClientId }: Props) {
   async function handleSubmit() {
     if (!form.client_id) return;
     setSaving(true);
-    const res = await fetch("/api/screenings", {
+    const res = await fetch("/api/screenings-tool", {
       method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
       body: JSON.stringify({ ...form, tool: tool.id, answers, total_score: totalScore, severity_label: severity.label }),
     });
     const data = await res.json();
-    if (res.ok) router.push(`/dashboard/screenings/${tool.id}/${data.screening.id}`);
+    if (res.ok) router.push(`/dashboard/assessments/screenings/${tool.id}/${data.screening.id}`);
     else setSaving(false);
   }
 
@@ -79,10 +79,10 @@ export default function ScreeningForm({ tool, prefilledClientId }: Props) {
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
         <div className="relative">
           <label className={labelClass}>Client *</label>
-          {form.client_name ? (
+          {form.patient_name ? (
             <div className="flex items-center justify-between bg-teal-50 border border-teal-200 rounded-xl px-4 py-2.5">
-              <span className="text-sm font-semibold text-teal-800">{form.client_name}</span>
-              <button type="button" onClick={() => setForm(f => ({ ...f, client_id: "", client_name: "" }))} className="text-teal-500 text-sm">✕</button>
+              <span className="text-sm font-semibold text-teal-800">{form.patient_name}</span>
+              <button type="button" onClick={() => setForm(f => ({ ...f, client_id: "", patient_name: "" }))} className="text-teal-500 text-sm">✕</button>
             </div>
           ) : (
             <div className="relative">
@@ -90,7 +90,7 @@ export default function ScreeningForm({ tool, prefilledClientId }: Props) {
               {clients.length > 0 && (
                 <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl mt-1 shadow-lg z-10">
                   {clients.map(c => (
-                    <button key={c.id} type="button" onClick={() => { setForm(f => ({ ...f, client_id: c.id, client_name: `${c.last_name}, ${c.first_name}` })); setClientSearch(""); setClients([]); }}
+                    <button key={c.id} type="button" onClick={() => { setForm(f => ({ ...f, client_id: c.id, patient_name: `${c.last_name}, ${c.first_name}` })); setClientSearch(""); setClients([]); }}
                       className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0">
                       <div className="font-semibold text-sm text-slate-900">{c.last_name}, {c.first_name}</div>
                       <div className="text-xs text-slate-400">MRN: {c.mrn || "—"}</div>

@@ -65,7 +65,7 @@ export default function CareTeam({ patientId, primaryClinicianId, primaryClinici
   const router = useRouter();
 
   useEffect(() => {
-    fetch(`/api/care-team?patient_id=${patientId}`, { credentials: "include" })
+    fetch(`/api/care-team?client_id=${patientId}`, { credentials: "include" })
       .then(r => r.json()).then(d => { setTeam(d.team || []); setLoading(false); });
     fetch("/api/org-users", { credentials: "include" })
       .then(r => r.json()).then(d => setStaff(d.users || []));
