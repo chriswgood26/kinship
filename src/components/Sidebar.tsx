@@ -28,6 +28,12 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    label: "Clinical",
+    items: [
+      { href: "/dashboard/treatment-plans", label: "Treatment Plans", icon: "📋" },
+    ],
+  },
+  {
     label: "Insights",
     items: [
       { href: "/dashboard/reports", label: "Reports", icon: "📊" },
