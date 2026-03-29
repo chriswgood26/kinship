@@ -152,7 +152,7 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                           <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${PLAN_COLORS[plan]}`}>
                             {PLAN_LABELS[plan]}
                           </span>
-                          {org.addons?.length > 0 && (
+                          {(org.addons?.length ?? 0) > 0 && (
                             <div className="text-xs text-slate-400 mt-0.5">{org.addons.join(", ")}</div>
                           )}
                         </td>
