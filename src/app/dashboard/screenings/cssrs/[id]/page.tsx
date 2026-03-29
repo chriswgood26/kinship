@@ -19,22 +19,21 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
 
   if (!screening) notFound();
 
-  const patient = Array.isArray(screening.patient) ? screening.patient[0] : screening.patient;
+  const clientRecord = Array.isArray(screening.client) ? screening.client[0] : screening.client;
   const answers = screening.answers || {};
-  const ideation = answers.ideation || {};
-  const behavior = answers.behavior || {};
-  const intensity = answers.intensity || {};
-  const risk = getCSSRSRisk(ideation, behavior);
+  const ideationAnswers = answers.ideation || {};
+  const behaviorAnswers = answers.behavior || {};
+  const risk = getCSSRSRisk(ideationAnswers, behaviorAnswers);
 
   return (
     <div className="max-w-3xl space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/dashboard/assessments" className="text-slate-400 hover:text-slate-700">←</Link>
+        <Link href="/dashboard/screenings" className="text-slate-400 hover:text-slate-700">←</Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">C-SSRS Results</h1>
-          {clientData && (
-            <Link href={`/dashboard/clients/${clientData.id}`} className="text-teal-600 text-sm font-medium hover:text-teal-700 mt-0.5 block">
-              {clientData.last_name}, {clientData.first_name} · MRN: {clientData.mrn || "—"}
+          {clientRecord && (
+            <Link href={`/dashboard/clients/${clientRecord.id}`} className="text-teal-600 text-sm font-medium hover:text-teal-700 mt-0.5 block">
+              {clientRecord.last_name}, {clientRecord.first_name} · MRN: {clientRecord.mrn || "—"}
             </Link>
           )}
         </div>
@@ -62,8 +61,8 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100"><h2 className="font-semibold text-slate-900">Suicidal Ideation</h2></div>
         <div className="divide-y divide-slate-50">
-          {CSSRS.ideation.questions.map((q, i) => {
-            const val = ideation[q.id as keyof typeof ideation] as boolean | undefined;
+          {CSSRS.ideation.questions.map(q => {
+            const val = ideationAnswers[q.id as keyof typeof ideationAnswers] as boolean | undefined;
             if (val === undefined) return null;
             return (
               <div key={q.id} className={`flex items-start gap-3 px-5 py-3.5 ${val ? "bg-red-50/30" : ""}`}>
@@ -83,7 +82,7 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
         <div className="px-5 py-4 border-b border-slate-100"><h2 className="font-semibold text-slate-900">Suicidal Behavior (Past 3 months)</h2></div>
         <div className="divide-y divide-slate-50">
           {CSSRS.behavior.questions.map(q => {
-            const val = behavior[q.id as keyof typeof behavior] as boolean | undefined;
+            const val = behaviorAnswers[q.id as keyof typeof behaviorAnswers] as boolean | undefined;
             if (val === undefined) return null;
             return (
               <div key={q.id} className={`flex items-start gap-3 px-5 py-3.5 ${val ? "bg-red-50/30" : ""}`}>
@@ -98,7 +97,6 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      {/* Clinical notes */}
       {screening.notes && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Clinical Notes / Safety Plan</div>
@@ -107,8 +105,8 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
       )}
 
       <div className="flex gap-3 pb-4">
-        {clientData && <Link href={`/dashboard/clients/${clientData.id}`} className="border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">View Client</Link>}
-        <Link href="/dashboard/assessments/screenings/cssrs/new" className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400">Administer Again</Link>
+        {clientRecord && <Link href={`/dashboard/clients/${clientRecord.id}`} className="border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">View Client</Link>}
+        <Link href="/dashboard/screenings/cssrs/new" className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400">Administer Again</Link>
       </div>
     </div>
   );
