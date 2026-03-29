@@ -33,8 +33,8 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
         <div>
           <h1 className="text-2xl font-bold text-slate-900">C-SSRS Results</h1>
           {patient && (
-            <Link href={`/dashboard/clients/${client.id}`} className="text-teal-600 text-sm font-medium hover:text-teal-700 mt-0.5 block">
-              {client.last_name}, {client.first_name} · MRN: {client.mrn || "—"}
+            <Link href={`/dashboard/clients/${clientData.id}`} className="text-teal-600 text-sm font-medium hover:text-teal-700 mt-0.5 block">
+              {clientData.last_name}, {clientData.first_name} · MRN: {clientData.mrn || "—"}
             </Link>
           )}
         </div>
@@ -107,7 +107,7 @@ export default async function CSSRSDetailPage({ params }: { params: Promise<{ id
       )}
 
       <div className="flex gap-3 pb-4">
-        {patient && <Link href={`/dashboard/clients/${client.id}`} className="border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">View Client</Link>}
+        {clientData && <Link href={`/dashboard/clients/${clientData.id}`} className="border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">View Client</Link>}
         <Link href="/dashboard/assessments/screenings/cssrs/new" className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400">Administer Again</Link>
       </div>
     </div>
