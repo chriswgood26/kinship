@@ -2,7 +2,7 @@ import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
-import { RATING_OPTIONS, getSeverity, isSuicidalIdeation } from "@/lib/screenings";
+import { RATING_OPTIONS, PHQ9, isSuicidalIdeation } from "@/lib/screenings";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,9 @@ export default async function ScreeningDetail({ tool, screeningId }: { tool: Too
   if (!screening) notFound();
 
   const client = Array.isArray(screening.client) ? screening.client[0] : screening.client;
-  const severity = getSeverity(screening.total_score || 0, tool);
+  const score = screening.total_score || 0;
+  const severityItem = tool.severity.find((s: {max: number}) => score <= s.max) || tool.severity[tool.severity.length - 1];
+  const severity = severityItem as { max: number; label: string; color: string; recommendation: string };
   const hasSI = tool.id === "phq9" && isSuicidalIdeation(screening.answers || {});
 
   return (
