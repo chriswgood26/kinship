@@ -6,7 +6,7 @@ import { RATING_OPTIONS, getSeverity, isSuicidalIdeation } from "@/lib/screening
 
 export const dynamic = "force-dynamic";
 
-interface Tool { id: string; name: string; fullName: string; maxScore: number; questions: { id: string; text: string }[]; severity: { max: number; label: string; color: string; recommendation: string }[]; }
+interface Tool { id: string; name: string; fullName: string; maxScore: number; questions: { id: string; text: string }[]; severity: { max: number; label: string; color: string; recommendation: string }[]; [key: string]: unknown; }
 
 export default async function ScreeningDetail({ tool, screeningId }: { tool: Tool; screeningId: string }) {
   const user = await currentUser();
