@@ -8,7 +8,7 @@ export default function HomePage() {
       <nav className="px-8 py-5 flex items-center justify-between border-b border-slate-100">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-          <span className="font-bold text-slate-900 text-lg">Kinship</span>
+          <span className="font-bold text-slate-900 text-lg">Kinship <span className="font-light text-slate-400">EHR</span></span>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/sign-in" className="text-slate-600 text-sm font-medium hover:text-slate-900">Sign in</Link>
@@ -138,15 +138,7 @@ export default function HomePage() {
               color: "border-slate-200 bg-white",
               features: ["Everything in Practice", "Unlimited clients", "50GB storage", "Multi-location support", "Custom workflows", "Dedicated onboarding", "SLA guarantee"],
             },
-            {
-              name: "Enterprise",
-              price: "Custom",
-              annual: null,
-              desc: "50+ staff · Multi-site",
-              color: "border-slate-800 bg-slate-900",
-              enterprise: true,
-              features: ["Everything in Agency", "Unlimited staff & sites", "Custom integrations", "Clearinghouse connection", "ePrescribing (DoseSpot)", "Dedicated success manager", "Custom SLA & contracts", "HIPAA BAA included"],
-            },
+
           ].map((p: {name: string; price: string; annual: string|null; desc: string; color: string; highlight?: boolean; enterprise?: boolean; features: string[]}) => (
             <div key={p.name} className={`rounded-2xl border p-5 ${p.color}`}>
               {p.highlight && <div className="text-xs font-bold text-teal-600 uppercase tracking-wide mb-2">Most Popular</div>}
@@ -172,8 +164,8 @@ export default function HomePage() {
                 </a>
               )}
               {p.enterprise && (
-                <a href="mailto:hello@kinshipehr.com" className="block text-center mt-4 bg-white text-slate-900 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-100">
-                  Contact us for pricing →
+                <a href="#waitlist" className="block text-center mt-4 bg-white text-slate-900 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-100">
+                  Inquire about pricing →
                 </a>
               )}
             </div>
@@ -205,6 +197,25 @@ export default function HomePage() {
           <div>
             <div className="font-semibold text-slate-900">One-time implementation fee: $500–$2,500</div>
             <div className="text-sm text-slate-500 mt-0.5">Includes data migration, staff training, and onboarding support. Most agencies are live within 5 business days.</div>
+          </div>
+        </div>
+
+        {/* Enterprise horizontal card */}
+        <div className="mt-4 bg-slate-900 rounded-2xl border border-slate-700 p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
+          <div className="flex-1">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Enterprise</div>
+            <div className="text-xl font-bold text-white mb-1">50+ staff · Multi-site organizations</div>
+            <div className="text-slate-400 text-sm">Custom pricing based on scope. Includes unlimited staff & sites, custom integrations, clearinghouse connection, ePrescribing (DoseSpot), dedicated success manager, custom SLA & contracts, and HIPAA BAA.</div>
+          </div>
+          <div className="flex-shrink-0 flex flex-col gap-2 min-w-[180px]">
+            <div className="flex flex-wrap gap-2 mb-1">
+              {["Unlimited staff", "Custom integrations", "DoseSpot Rx", "HIPAA BAA", "Dedicated CSM"].map(f => (
+                <span key={f} className="text-xs bg-slate-700 text-slate-300 rounded-lg px-2 py-1">{f}</span>
+              ))}
+            </div>
+            <a href="#waitlist" className="block text-center bg-white text-slate-900 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-100 transition-colors">
+              Inquire about pricing →
+            </a>
           </div>
         </div>
 
