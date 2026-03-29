@@ -126,7 +126,11 @@ export default async function ClientsPage({
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <Link href={`/dashboard/clients/${client.id}`} className="text-teal-600 text-sm font-medium hover:text-teal-700">View →</Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/dashboard/clients/${client.id}`} className="text-teal-600 text-xs font-medium hover:text-teal-700">View</Link>
+                        <span className="text-slate-200">|</span>
+                        <Link href={`/dashboard/scheduling/new?client_id=${client.id}`} className="text-slate-500 text-xs font-medium hover:text-teal-600">📅 Schedule</Link>
+                      </div>
                     </td>
                   </tr>
                 );
