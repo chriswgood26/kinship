@@ -209,7 +209,7 @@ export default function HomePage() {
                 <span key={f} className="text-xs bg-slate-700 text-slate-300 rounded-lg px-2 py-1">{f}</span>
               ))}
             </div>
-            <a href="#waitlist" className="block text-center bg-white text-slate-900 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-100 transition-colors">
+            <a href="/?plan=Enterprise+%28custom+pricing%29#waitlist" className="block text-center bg-white text-slate-900 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-100 transition-colors">
               Inquire about pricing →
             </a>
           </div>
