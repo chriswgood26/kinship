@@ -39,6 +39,7 @@ export default function WaitlistForm() {
   }
 
   const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400";
+  const selectClass = "w-full bg-white border border-white/20 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-400";
   const plans = ["Starter ($149/mo)", "Growth ($349/mo)", "Practice ($599/mo)", "Agency ($899/mo)", "Enterprise (custom pricing)"];
 
   return (
@@ -58,7 +59,7 @@ export default function WaitlistForm() {
       </div>
       <input value={form.agency_name} onChange={e => setForm(f => ({ ...f, agency_name: e.target.value }))} className={inputClass} placeholder="Agency name" />
       <div className="grid grid-cols-2 gap-3">
-        <select value={form.agency_type} onChange={e => setForm(f => ({ ...f, agency_type: e.target.value }))} className={inputClass + " bg-white text-slate-900"}>
+        <select value={form.agency_type} onChange={e => setForm(f => ({ ...f, agency_type: e.target.value }))} className={selectClass}>
           <option value="">Agency type...</option>
           <option>Behavioral Health</option>
           <option>Developmental Disabilities</option>
@@ -67,7 +68,7 @@ export default function WaitlistForm() {
           <option>Residential</option>
           <option>Other</option>
         </select>
-        <select value={form.agency_size} onChange={e => setForm(f => ({ ...f, agency_size: e.target.value }))} className={inputClass + " bg-white text-slate-900"}>
+        <select value={form.agency_size} onChange={e => setForm(f => ({ ...f, agency_size: e.target.value }))} className={selectClass}>
           <option value="">Agency size...</option>
           <option>1-5 staff</option>
           <option>6-15 staff</option>
@@ -78,7 +79,7 @@ export default function WaitlistForm() {
 
       {/* Plan interest selector — shows if not pre-selected via URL */}
       {!form.interested_plan && (
-        <select value={form.interested_plan} onChange={e => setForm(f => ({ ...f, interested_plan: e.target.value }))} className={inputClass + " bg-white text-slate-900"}>
+        <select value={form.interested_plan} onChange={e => setForm(f => ({ ...f, interested_plan: e.target.value }))} className={selectClass}>
           <option value="">Interested plan... (optional)</option>
           {plans.map(p => <option key={p}>{p}</option>)}
         </select>
