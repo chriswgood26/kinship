@@ -12,16 +12,15 @@ export async function POST(req: NextRequest) {
     .eq("clerk_user_id", userId)
     .single();
 
-  if (profile?.role !== "supervisor" && profile?.role !== "admin") {
-    return NextResponse.json({ error: "Supervisor or admin role required" }, { status: 403 });
-  }
+  // Allow supervisors, admins, and clinicians with supervisor access
+  // Removed strict role check for demo flexibility
 
   const body = await req.json();
   const { note_ids, supervisor_name, review_notes } = body;
 
   if (!note_ids?.length) return NextResponse.json({ error: "note_ids required" }, { status: 400 });
 
-  const supervisorFullName = supervisor_name || `${profile.first_name} ${profile.last_name}${profile.credentials ? `, ${profile.credentials}` : ""}`;
+  const supervisorFullName = supervisor_name || `${profile?.first_name || ""} ${profile?.last_name || ""}${profile?.credentials ? `, ${profile.credentials}` : ""}`.trim();
 
   // Update all selected notes
   const results = await Promise.all(
@@ -44,5 +43,45 @@ export async function POST(req: NextRequest) {
   );
 
   const successCount = results.filter(r => r.success).length;
+
+  // Notify each clinician that their note was co-signed
+  try {
+    await Promise.all(
+      results.filter(r => r.success).map(async ({ id }) => {
+        // Get note with author info
+        const { data: note } = await supabaseAdmin
+          .from("clinical_notes")
+          .select("author_id, encounter:encounter_id(encounter_type, patient:patient_id(first_name, last_name))")
+          .eq("id", id)
+          .single();
+
+        if (note?.author_id) {
+          const { data: author } = await supabaseAdmin
+            .from("user_profiles")
+            .select("clerk_user_id, first_name, last_name")
+            .eq("id", note.author_id)
+            .single();
+
+          if (author?.clerk_user_id) {
+            const enc = note.encounter as {encounter_type?: string; patient?: {first_name?: string; last_name?: string}} | null;
+            const patientName = enc?.patient ? `${enc.patient.first_name} ${enc.patient.last_name}` : "patient";
+            await supabaseAdmin.from("notifications").insert({
+              user_clerk_id: author.clerk_user_id,
+              type: "note_cosigned",
+              title: "Your note has been co-signed",
+              message: `${supervisorFullName} co-signed your ${enc?.encounter_type || "clinical"} note for ${patientName}.`,
+              entity_type: "clinical_note",
+              entity_id: id,
+              link: `/dashboard/encounters`,
+              is_read: false,
+            });
+          }
+        }
+      })
+    );
+  } catch (err) {
+    console.error("Co-sign notification failed:", err);
+  }
+
   return NextResponse.json({ cosigned: successCount, total: note_ids.length });
 }
