@@ -5,6 +5,9 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import ClientMessagesPanel from "./ClientMessagesPanel";
 import ClientTabNav from "./ClientTabNav";
+import ClientDocumentsTab from "./ClientDocumentsTab";
+import ClientAllergiesTab from "./ClientAllergiesTab";
+import AllergyWidget from "./AllergyWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +86,16 @@ export default async function ClientDetailPage({
 
       {/* Tab navigation */}
       <ClientTabNav clientId={id} activeTab={activeTab} unreadMessageCount={unreadMessageCount} />
+
+      {/* Allergies tab */}
+      {activeTab === "allergies" && (
+        <ClientAllergiesTab clientId={id} />
+      )}
+
+      {/* Documents tab */}
+      {activeTab === "documents" && (
+        <ClientDocumentsTab clientId={id} />
+      )}
 
       {/* Messages tab */}
       {activeTab === "messages" && (
@@ -166,6 +179,14 @@ export default async function ClientDetailPage({
               <InfoRow label="Member ID" value={client.insurance_member_id} />
               <InfoRow label="Group #" value={client.insurance_group_number} />
             </dl>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-slate-900 text-sm">Allergies</h2>
+              <a href={`/dashboard/clients/${id}?tab=allergies`} className="text-xs text-teal-600 font-medium hover:text-teal-700">View all</a>
+            </div>
+            <AllergyWidget clientId={id} />
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
