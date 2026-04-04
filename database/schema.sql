@@ -273,3 +273,103 @@ create table if not exists feedback (
 
 -- Add addons column to organizations
 alter table organizations add column if not exists addons text[] default '{}';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Clearinghouse Integration (Office Ally)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Add billing ERA columns to charges (for auto-payment posting)
+alter table charges add column if not exists paid_amount decimal(10,2);
+alter table charges add column if not exists era_remittance_id uuid;
+alter table charges add column if not exists posted_at timestamptz;
+
+-- Claim submissions to clearinghouse (837P/I)
+create table if not exists clearinghouse_submissions (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  clearinghouse text not null default 'office_ally',
+  submission_date timestamptz default now(),
+  charge_ids text[] not null default '{}',
+  status text default 'submitted',        -- submitted, acknowledged, rejected, failed
+  submission_id text,                      -- Office Ally batch/confirmation ID
+  control_number text,                     -- ISA13 interchange control number
+  edi_content text,                        -- raw 837 content sent
+  error_message text,
+  -- 999 acknowledgment fields
+  ack_status text,                         -- accepted, rejected
+  ack_date date,
+  ack_errors text[] default '{}',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_clearinghouse_submissions_org
+  on clearinghouse_submissions(organization_id, submission_date desc);
+
+create index if not exists idx_clearinghouse_submissions_control
+  on clearinghouse_submissions(control_number)
+  where control_number is not null;
+
+-- ERA / 835 remittance advices
+create table if not exists era_remittances (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  clearinghouse text not null default 'office_ally',
+  payment_date date,
+  payer_name text,
+  payee_npi text,
+  check_number text,
+  payment_method text,                     -- ACH/EFT, Check, etc.
+  total_payment_amount decimal(12,2) default 0,
+  claims_count int default 0,
+  raw_content text,                        -- raw 835 EDI stored for audit
+  auto_posted boolean default false,
+  posted_at timestamptz,
+  post_errors text[] default '{}',
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_era_remittances_org
+  on era_remittances(organization_id, payment_date desc);
+
+-- Individual ERA payment line items (per CPT/service line)
+create table if not exists era_payment_lines (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  era_remittance_id uuid references era_remittances(id) on delete cascade not null,
+  charge_id uuid references charges(id) on delete set null,
+  payer_claim_number text,
+  claim_status_code text,
+  claim_status_label text,
+  patient_name text,
+  patient_member_id text,
+  cpt_code text,
+  charged_amount decimal(10,2),
+  paid_amount decimal(10,2),
+  patient_responsibility decimal(10,2),
+  adjustments jsonb default '[]',          -- array of {groupCode, reasonCode, amount}
+  posted boolean default false,
+  posted_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_era_payment_lines_remittance
+  on era_payment_lines(era_remittance_id);
+
+create index if not exists idx_era_payment_lines_charge
+  on era_payment_lines(charge_id)
+  where charge_id is not null;
+
+-- Appointment reminder log (tracks which reminders have been sent to prevent duplicates)
+create table if not exists appointment_reminder_log (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  appointment_id uuid references appointments(id) on delete cascade not null,
+  reminder_type text not null, -- confirmation, reminder_24h, reminder_1h, no_show_followup
+  channel text not null,       -- email, sms
+  recipient text,              -- email address or phone number
+  sent_at timestamptz default now()
+);
+
+create index if not exists idx_reminder_log_appointment
+  on appointment_reminder_log(appointment_id, reminder_type);
