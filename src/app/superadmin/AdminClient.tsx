@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES, type Plan } from "@/lib/plans";
 
 interface Org {
@@ -145,8 +146,10 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                     <>
                       <tr key={org.id} className={`hover:bg-slate-50 transition-colors ${!org.is_active ? "opacity-40" : ""}`}>
                         <td className="px-5 py-3.5">
-                          <div className="font-semibold text-sm text-slate-900">{org.name || "Unnamed"}</div>
-                          <div className="text-xs text-slate-400 font-mono">{org.id.slice(0,8)}...</div>
+                          <Link href={`/superadmin/orgs/${org.id}`} className="group">
+                            <div className="font-semibold text-sm text-slate-900 group-hover:text-teal-600 transition-colors">{org.name || "Unnamed"}</div>
+                            <div className="text-xs text-slate-400 font-mono">{org.id.slice(0,8)}...</div>
+                          </Link>
                         </td>
                         <td className="px-4 py-3.5">
                           <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${PLAN_COLORS[plan]}`}>
@@ -160,10 +163,14 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                         <td className="px-4 py-3.5 text-sm font-bold text-emerald-700">${orgMrr}/mo</td>
                         <td className="px-4 py-3.5 text-xs text-slate-500 capitalize">{org.org_type?.replace("_", " ") || "—"}</td>
                         <td className="px-4 py-3.5 text-xs text-slate-400">{new Date(org.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
-                        <td className="px-4 py-3.5">
-                          <button onClick={() => { setEditingOrg(editingOrg === org.id ? null : org.id); setEditPlan(plan); setEditAddons(org.addons || []); }}
+                        <td className="px-4 py-3.5 flex items-center gap-2">
+                          <Link href={`/superadmin/orgs/${org.id}`}
                             className="text-xs text-teal-600 font-medium hover:text-teal-700 border border-teal-200 px-2.5 py-1 rounded-lg">
-                            {editingOrg === org.id ? "Cancel" : "Manage"}
+                            Details
+                          </Link>
+                          <button onClick={() => { setEditingOrg(editingOrg === org.id ? null : org.id); setEditPlan(plan); setEditAddons(org.addons || []); }}
+                            className="text-xs text-slate-500 font-medium hover:text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg">
+                            {editingOrg === org.id ? "Cancel" : "Quick Edit"}
                           </button>
                         </td>
                       </tr>
