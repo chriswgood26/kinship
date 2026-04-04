@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { PHQ9, GAD7, getSeverity } from "@/lib/screenings";
 import { CSSRS } from "@/lib/cssrs";
+import { AUDIT, DAST10 } from "@/lib/substanceScreenings";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,8 @@ export default async function ScreeningsPage() {
   const phq9Count = screenings?.filter(s => s.tool === "phq9").length || 0;
   const gad7Count = screenings?.filter(s => s.tool === "gad7").length || 0;
   const cssrsCount = screenings?.filter(s => s.tool === "cssrs").length || 0;
+  const auditCount = screenings?.filter(s => s.tool === "audit").length || 0;
+  const dastCount = screenings?.filter(s => s.tool === "dast10").length || 0;
   const siAlerts = screenings?.filter(s => s.tool === "phq9" && (s.answers?.q9 || 0) > 0).length || 0;
 
   return (
@@ -30,9 +33,9 @@ export default async function ScreeningsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Screenings</h1>
-          <p className="text-slate-500 text-sm mt-0.5">PHQ-9 and GAD-7 standardized screening tools</p>
+          <p className="text-slate-500 text-sm mt-0.5">PHQ-9, GAD-7, AUDIT, DAST-10, and C-SSRS standardized screening tools</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/screenings/phq9/new"
             className="border border-teal-200 text-teal-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-50 text-sm">
             + PHQ-9
@@ -40,6 +43,14 @@ export default async function ScreeningsPage() {
           <Link href="/dashboard/screenings/gad7/new"
             className="border border-purple-200 text-purple-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-purple-50 text-sm">
             + GAD-7
+          </Link>
+          <Link href="/dashboard/screenings/audit/new"
+            className="border border-amber-200 text-amber-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-amber-50 text-sm">
+            + AUDIT
+          </Link>
+          <Link href="/dashboard/screenings/dast10/new"
+            className="border border-violet-200 text-violet-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-violet-50 text-sm">
+            + DAST-10
           </Link>
           <Link href="/dashboard/screenings/cssrs/new"
             className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 text-sm">
@@ -60,33 +71,100 @@ export default async function ScreeningsPage() {
 
       {/* Tool cards */}
       <div className="grid grid-cols-2 gap-4">
-        {[
-          { tool: PHQ9, count: phq9Count, href: "/dashboard/screenings/phq9/new", bg: "bg-blue-50 border-blue-100" },
-          { tool: GAD7, count: gad7Count, href: "/dashboard/screenings/gad7/new", bg: "bg-purple-50 border-purple-100" },
-        ].map(({ tool, count, href, bg }) => (
-          <div key={tool.id} className={`${bg} border rounded-2xl p-5`}>
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <div className="font-bold text-slate-900 text-lg">{tool.name}</div>
-                <div className="text-sm text-slate-500">{tool.fullName}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-slate-900">{count}</div>
-                <div className="text-xs text-slate-400">completed</div>
-              </div>
+        {/* PHQ-9 */}
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{PHQ9.name}</div>
+              <div className="text-sm text-slate-500">{PHQ9.fullName}</div>
             </div>
-            <div className="text-xs text-slate-500 mb-3">{tool.questions.length} questions · Max score {tool.maxScore}</div>
-            <div className="flex flex-wrap gap-1 mb-4">
-              {tool.severity.map(s => (
-                <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
-              ))}
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{phq9Count}</div>
+              <div className="text-xs text-slate-400">completed</div>
             </div>
-            <Link href={href} className={`block text-center py-2 rounded-xl text-sm font-semibold ${tool.id === "phq9" ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-purple-500 text-white hover:bg-purple-600"} transition-colors`}>
-              Administer {tool.name} →
-            </Link>
           </div>
-        ))}
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+          <div className="text-xs text-slate-500 mb-3">{PHQ9.questions.length} questions · Max score {PHQ9.maxScore}</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {PHQ9.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/phq9/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+            Administer PHQ-9 →
+          </Link>
+        </div>
+
+        {/* GAD-7 */}
+        <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{GAD7.name}</div>
+              <div className="text-sm text-slate-500">{GAD7.fullName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{gad7Count}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">{GAD7.questions.length} questions · Max score {GAD7.maxScore}</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {GAD7.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/gad7/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-purple-500 text-white hover:bg-purple-600 transition-colors">
+            Administer GAD-7 →
+          </Link>
+        </div>
+
+        {/* AUDIT */}
+        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{AUDIT.name}</div>
+              <div className="text-sm text-slate-500">{AUDIT.fullName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{auditCount}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">{AUDIT.questions.length} questions · Max score {AUDIT.maxScore} · WHO validated</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {AUDIT.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/audit/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-colors">
+            Administer AUDIT →
+          </Link>
+        </div>
+
+        {/* DAST-10 */}
+        <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{DAST10.name}</div>
+              <div className="text-sm text-slate-500">{DAST10.fullName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{dastCount}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">{DAST10.questions.length} questions · Max score {DAST10.maxScore} · Yes/No format</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {DAST10.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/dast10/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors">
+            Administer DAST-10 →
+          </Link>
+        </div>
+
+        {/* C-SSRS */}
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 col-span-2">
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="font-bold text-slate-900 text-lg">C-SSRS</div>
@@ -137,14 +215,22 @@ export default async function ScreeningsPage() {
               {screenings.map(s => {
                 const client = Array.isArray(s.client) ? s.client[0] : s.client;
                 const isCSSRS = s.tool === "cssrs";
+                const isAUDIT = s.tool === "audit";
+                const isDAST = s.tool === "dast10";
+                const isSubstance = isAUDIT || isDAST;
+                const isStandard = !isCSSRS && !isSubstance;
                 const tool = s.tool === "phq9" ? PHQ9 : GAD7;
-                const severity = isCSSRS ? null : getSeverity(s.total_score || 0, tool);
+                const severity = isStandard ? getSeverity(s.total_score || 0, tool) : null;
                 const hasSI = s.tool === "phq9" && (s.answers?.q9 || 0) > 0;
-                const cssrsRiskColors: Record<string, string> = {
-                  "Low Risk": "bg-emerald-100 text-emerald-700",
-                  "Moderate Risk": "bg-amber-100 text-amber-700",
-                  "High Risk": "bg-orange-100 text-orange-700",
-                  "Imminent Risk": "bg-red-100 text-red-700",
+                const toolBadgeClass: Record<string, string> = {
+                  phq9: "bg-blue-100 text-blue-700",
+                  gad7: "bg-purple-100 text-purple-700",
+                  cssrs: "bg-red-100 text-red-700",
+                  audit: "bg-amber-100 text-amber-700",
+                  dast10: "bg-violet-100 text-violet-700",
+                };
+                const toolMaxScore: Record<string, number> = {
+                  phq9: PHQ9.maxScore, gad7: GAD7.maxScore, audit: AUDIT.maxScore, dast10: DAST10.maxScore,
                 };
                 return (
                   <tr key={s.id} className="hover:bg-slate-50">
@@ -153,8 +239,8 @@ export default async function ScreeningsPage() {
                       <div className="text-xs text-slate-400">{client?.mrn || "—"}</div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.tool === "phq9" ? "bg-blue-100 text-blue-700" : s.tool === "cssrs" ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700"}`}>
-                        {s.tool?.toUpperCase()}
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${toolBadgeClass[s.tool] || "bg-slate-100 text-slate-600"}`}>
+                        {s.tool === "dast10" ? "DAST-10" : s.tool?.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{s.administered_at ? new Date(s.administered_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
@@ -162,12 +248,12 @@ export default async function ScreeningsPage() {
                       {isCSSRS ? (
                         <span className="text-sm font-semibold text-slate-500">Level {s.total_score ?? "—"}</span>
                       ) : (
-                        <>{s.total_score ?? "—"}<span className="text-sm font-normal text-slate-400">/{tool.maxScore}</span></>
+                        <>{s.total_score ?? "—"}<span className="text-sm font-normal text-slate-400">/{toolMaxScore[s.tool] ?? "—"}</span></>
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      {isCSSRS ? (
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${cssrsRiskColors[s.severity_label || ""] || "bg-slate-100 text-slate-600"}`}>
+                      {(isCSSRS || isSubstance) ? (
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600`}>
                           {s.severity_label || "—"}
                         </span>
                       ) : (
