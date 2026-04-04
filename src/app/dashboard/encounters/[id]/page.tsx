@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import SOAPEditor from "./SOAPEditor";
+import NoteAmendmentPanel from "./NoteAmendmentPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,16 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
   const client = Array.isArray(encounter.client) ? encounter.client[0] : encounter.client;
   const existingNote = notes?.[0] || null;
   const isSigned = existingNote?.is_signed || false;
+
+  // Fetch amendments for signed notes
+  const amendments = isSigned && existingNote?.id
+    ? (await supabaseAdmin
+        .from("note_amendments")
+        .select("*")
+        .eq("note_id", existingNote.id)
+        .order("created_at", { ascending: true })
+      ).data ?? []
+    : [];
 
   return (
     <div className="max-w-4xl space-y-5">
@@ -53,34 +64,42 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
       )}
 
       {isSigned && existingNote ? (
-        <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden">
-          <div className="px-5 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
-            <h2 className="font-semibold text-emerald-900">✓ Signed Progress Note</h2>
-            <div className="text-xs text-emerald-600">
-              {existingNote.signed_at ? new Date(existingNote.signed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : ""}
+        <>
+          <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden">
+            <div className="px-5 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+              <h2 className="font-semibold text-emerald-900">✓ Signed Progress Note</h2>
+              <div className="text-xs text-emerald-600">
+                {existingNote.signed_at ? new Date(existingNote.signed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : ""}
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              {[
+                { label: "S — Subjective", value: existingNote.subjective, color: "border-blue-100 bg-blue-50/30" },
+                { label: "O — Objective", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
+                { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
+                { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
+              ].map(s => s.value && (
+                <div key={s.label} className={`border rounded-xl p-4 ${s.color}`}>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{s.label}</div>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.value}</p>
+                </div>
+              ))}
+              {existingNote.diagnosis_codes?.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {existingNote.diagnosis_codes.map((code: string) => (
+                    <span key={code} className="font-mono text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-bold">{code}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          <div className="p-6 space-y-4">
-            {[
-              { label: "S — Subjective", value: existingNote.subjective, color: "border-blue-100 bg-blue-50/30" },
-              { label: "O — Objective", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
-              { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
-              { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
-            ].map(s => s.value && (
-              <div key={s.label} className={`border rounded-xl p-4 ${s.color}`}>
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{s.label}</div>
-                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.value}</p>
-              </div>
-            ))}
-            {existingNote.diagnosis_codes?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {existingNote.diagnosis_codes.map((code: string) => (
-                  <span key={code} className="font-mono text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-bold">{code}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+
+          {/* Amendments & Addenda panel — always shown for signed notes */}
+          <NoteAmendmentPanel
+            noteId={existingNote.id}
+            initialAmendments={amendments}
+          />
+        </>
       ) : (
         <SOAPEditor
           encounterId={id}

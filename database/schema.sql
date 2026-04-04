@@ -165,9 +165,27 @@ create table if not exists clinical_notes (
   diagnosis_codes text[],
   is_signed boolean default false,
   signed_at timestamptz,
+  signed_by_clerk_id text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Note amendments / addenda (corrections to locked/signed notes)
+-- The original note is never modified; amendments append to the audit trail.
+create table if not exists note_amendments (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  note_id uuid references clinical_notes(id) on delete cascade not null,
+  amendment_type text not null check (amendment_type in ('amendment', 'addendum')),
+  -- amendment = factual correction; addendum = additional information
+  content text not null,
+  author_clerk_id text not null,
+  author_name text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_note_amendments_note_id on note_amendments(note_id);
+create index if not exists idx_note_amendments_org on note_amendments(organization_id);
 
 -- Treatment plans
 create table if not exists treatment_plans (
@@ -533,6 +551,7 @@ alter table clients enable row level security;
 alter table appointments enable row level security;
 alter table encounters enable row level security;
 alter table clinical_notes enable row level security;
+alter table note_amendments enable row level security;
 alter table treatment_plans enable row level security;
 alter table charges enable row level security;
 alter table screenings enable row level security;
@@ -595,6 +614,12 @@ create policy "org_clinical_notes_update" on clinical_notes
   for update using (
     encounter_id in (select id from encounters where organization_id = auth_org_id())
   );
+
+-- note_amendments: scoped to organization
+create policy "org_note_amendments_select" on note_amendments
+  for select using (organization_id = auth_org_id());
+create policy "org_note_amendments_insert" on note_amendments
+  for insert with check (organization_id = auth_org_id());
 
 -- treatment_plans
 create policy "org_treatment_plans_select" on treatment_plans
