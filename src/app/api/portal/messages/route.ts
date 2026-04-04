@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getOrgId } from "@/lib/getOrgId";
 import { sendEmail } from "@/lib/communications";
+import { logAuditEvent, getRequestIp, getRequestUserAgent } from "@/lib/auditLog";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
@@ -19,6 +20,18 @@ export async function GET(req: NextRequest) {
     .eq("organization_id", orgId)
     .eq("client_id", clientId)
     .order("created_at", { ascending: true });
+
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    action: "view",
+    resource_type: "portal_message",
+    client_id: clientId,
+    description: `Viewed portal messages for client ${clientId}`,
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
+
   return NextResponse.json({ messages: data || [] });
 }
 
@@ -64,6 +77,21 @@ export async function POST(req: NextRequest) {
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    user_name: senderName,
+    action: "create",
+    resource_type: "portal_message",
+    resource_id: data?.id ?? null,
+    client_id: body.client_id ?? null,
+    description: isStaffReply
+      ? `Sent portal message to client ${body.client_id}`
+      : `Received portal message from patient for client ${body.client_id}`,
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
 
   const msgId = data?.id || null;
 

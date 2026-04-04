@@ -414,3 +414,34 @@ create index if not exists idx_portal_messages_client on portal_messages(client_
 
 create index if not exists idx_reminder_log_appointment
   on appointment_reminder_log(appointment_id, reminder_type);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- HIPAA PHI Audit Log
+-- Required by 45 CFR §164.312(b): Audit controls for PHI access
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create table if not exists phi_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  user_clerk_id text not null,              -- Clerk ID of the staff member who acted
+  user_name text,                           -- Display name at time of action
+  action text not null,                     -- view, create, update, delete, export, download, print
+  resource_type text not null,              -- client, vitals, screening, clinical_note, encounter, etc.
+  resource_id text,                         -- UUID of the record accessed (if applicable)
+  client_id uuid references clients(id) on delete set null, -- patient whose data was accessed
+  description text,                         -- human-readable summary
+  ip_address text,                          -- requester IP
+  user_agent text,                          -- browser / client string
+  created_at timestamptz default now() not null
+);
+
+-- Optimized for HIPAA audit queries: by org+time, by user, by client
+create index if not exists idx_phi_audit_logs_org_time
+  on phi_audit_logs(organization_id, created_at desc);
+
+create index if not exists idx_phi_audit_logs_user
+  on phi_audit_logs(user_clerk_id, created_at desc);
+
+create index if not exists idx_phi_audit_logs_client
+  on phi_audit_logs(client_id, created_at desc)
+  where client_id is not null;

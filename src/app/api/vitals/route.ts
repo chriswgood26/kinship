@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getOrgId } from "@/lib/getOrgId";
+import { logAuditEvent, getRequestIp, getRequestUserAgent } from "@/lib/auditLog";
 
 
 export async function GET(req: NextRequest) {
@@ -19,12 +20,25 @@ export async function GET(req: NextRequest) {
     .order("recorded_at", { ascending: false })
     .limit(50);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    action: "view",
+    resource_type: "vitals",
+    client_id: patientId,
+    description: `Viewed vitals for client ${patientId}`,
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
+
   return NextResponse.json({ vitals: data || [] });
 }
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const body = await req.json();
   const { client_id, encounter_id, recorded_at, ...measurements } = body;
   if (!client_id) return NextResponse.json({ error: "client_id required" }, { status: 400 });
@@ -60,5 +74,19 @@ export async function POST(req: NextRequest) {
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    user_name: profile ? `${profile.first_name} ${profile.last_name}` : null,
+    action: "create",
+    resource_type: "vitals",
+    resource_id: data?.id ?? null,
+    client_id: client_id,
+    description: `Recorded vitals for client ${client_id}`,
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
+
   return NextResponse.json({ vital: data }, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getOrgId } from "@/lib/getOrgId";
+import { logAuditEvent, getRequestIp, getRequestUserAgent } from "@/lib/auditLog";
 
 
 export async function GET(req: NextRequest) {
@@ -20,12 +21,27 @@ export async function GET(req: NextRequest) {
   if (programId) query = query.eq("program_id", programId);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    action: "view",
+    resource_type: "client_program",
+    client_id: patientId ?? null,
+    description: patientId
+      ? `Viewed program enrollments for client ${patientId}`
+      : "Viewed all client program enrollments",
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
+
   return NextResponse.json({ enrollments: data || [] });
 }
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const body = await req.json();
   const { data, error } = await supabaseAdmin.from("client_programs").insert({
     organization_id: orgId,
