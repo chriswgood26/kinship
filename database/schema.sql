@@ -108,9 +108,26 @@ create table if not exists appointments (
   is_group boolean default false,
   group_name text,
   notes text,
+  -- Telehealth fields
+  is_telehealth boolean default false,
+  telehealth_platform text,        -- 'zoom' | 'webex' | 'jitsi'
+  meeting_url text,
+  meeting_id text,
+  meeting_password text,
+  telehealth_started_at timestamptz,
+  telehealth_ended_at timestamptz,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Migration: add telehealth columns to existing appointments table
+alter table appointments add column if not exists is_telehealth boolean default false;
+alter table appointments add column if not exists telehealth_platform text;
+alter table appointments add column if not exists meeting_url text;
+alter table appointments add column if not exists meeting_id text;
+alter table appointments add column if not exists meeting_password text;
+alter table appointments add column if not exists telehealth_started_at timestamptz;
+alter table appointments add column if not exists telehealth_ended_at timestamptz;
 
 -- Encounters
 create table if not exists encounters (
@@ -193,31 +210,49 @@ create table if not exists referrals (
   status text default 'pending',
   priority text default 'routine',
   referred_by text,
+  referred_by_email text,
   referred_to text,
+  referred_to_email text,
   referred_to_org text,
   reason text,
   notes text,
   referral_date date,
   due_date date,
+  applicant_email text,
   incident_category text default 'client',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Add email columns if migrating existing DB
+alter table referrals add column if not exists referred_by_email text;
+alter table referrals add column if not exists referred_to_email text;
+alter table referrals add column if not exists applicant_email text;
 
 -- Documents
 create table if not exists documents (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid references organizations(id),
   client_id uuid references clients(id) on delete cascade,
+  referral_id uuid references referrals(id) on delete cascade,
+  user_profile_id uuid references user_profiles(id) on delete cascade,
   uploaded_by text not null,
   file_name text not null,
   file_size int,
   file_type text,
   storage_path text not null,
+  thumbnail_path text,
   category text default 'general',
   notes text,
+  ocr_data jsonb,
   created_at timestamptz default now()
 );
+
+-- Add missing columns to existing documents tables (for migrations)
+alter table documents add column if not exists referral_id uuid references referrals(id) on delete cascade;
+alter table documents add column if not exists user_profile_id uuid references user_profiles(id) on delete cascade;
+alter table documents add column if not exists thumbnail_path text;
+alter table documents add column if not exists ocr_data jsonb;
 
 -- Waitlist (for landing page signups)
 create table if not exists waitlist (
@@ -637,3 +672,140 @@ create policy "org_phi_audit_logs_select" on phi_audit_logs
 -- user_profiles: users can read profiles within their own org
 create policy "org_user_profiles_select" on user_profiles
   for select using (organization_id = auth_org_id());
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Sliding Fee Scale Phase 2
+-- Program-area overrides, per-service overrides, grant-specific schedules,
+-- payer exclusions, retroactive adjustment tracking
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Program-area overrides: custom tier sets per clinical program
+create table if not exists sfs_program_overrides (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  program_area text not null,   -- mental_health, substance_use, dd, residential, primary_care, other
+  label text not null,
+  tiers jsonb not null default '[]',  -- array of SFSTier objects
+  is_active boolean default true,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_sfs_program_overrides_org
+  on sfs_program_overrides(organization_id) where is_active = true;
+
+-- Per-service overrides: CPT-code-level copay override (supersedes tier lookup)
+create table if not exists sfs_service_overrides (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  cpt_code text not null,
+  cpt_description text,
+  override_type text not null check (override_type in ('flat', 'percent', 'waive', 'full_fee')),
+  override_value decimal(10,2) default 0,   -- $ for flat, 0-100 for percent, ignored for waive/full_fee
+  applies_to_fpl_max int,                   -- null = applies to all FPL%; set to limit to ≤N%
+  is_active boolean default true,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_sfs_service_overrides_org
+  on sfs_service_overrides(organization_id, cpt_code) where is_active = true;
+
+-- Grant-specific schedules: named SFS schedules tied to grant requirements
+create table if not exists sfs_grant_schedules (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  grant_name text not null,
+  grant_number text,
+  funder text,
+  tiers jsonb not null default '[]',            -- array of SFSTier objects
+  fpl_ceiling int,                               -- only applies to clients at/below this FPL%
+  effective_date date not null,
+  expiration_date date,
+  applies_to_program_areas text[] default '{}', -- empty = all programs
+  is_active boolean default true,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_sfs_grant_schedules_org
+  on sfs_grant_schedules(organization_id, effective_date desc) where is_active = true;
+
+-- Payer exclusions: SFS does not apply when client has this insurance payer
+create table if not exists sfs_payer_exclusions (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  payer_name text not null,
+  payer_id text,           -- clearinghouse payer ID (optional)
+  reason text,             -- commercial_insurance, medicaid, medicare, managed_care, other
+  notes text,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_sfs_payer_exclusions_org
+  on sfs_payer_exclusions(organization_id) where is_active = true;
+
+-- Retroactive adjustment log: tracks when prior charges were re-calculated after tier change
+create table if not exists sfs_retroactive_adjustments (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  income_assessment_id uuid,   -- references client_income_assessments.id
+  old_fpl_percent int,
+  new_fpl_percent int,
+  charges_affected int default 0,
+  total_adjustment_delta decimal(12,2) default 0,  -- negative = client owes less
+  applied_by_clerk_id text,
+  line_items jsonb default '[]',  -- array of {charge_id, old_owes, new_owes, delta}
+  status text default 'applied',  -- applied, reversed
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_sfs_retroactive_adj_org
+  on sfs_retroactive_adjustments(organization_id, created_at desc);
+create index if not exists idx_sfs_retroactive_adj_client
+  on sfs_retroactive_adjustments(client_id, created_at desc);
+
+-- RLS for Phase 2 tables (admin-only access via service role in app, policies for defense-in-depth)
+alter table sfs_program_overrides enable row level security;
+alter table sfs_service_overrides enable row level security;
+alter table sfs_grant_schedules enable row level security;
+alter table sfs_payer_exclusions enable row level security;
+alter table sfs_retroactive_adjustments enable row level security;
+
+create policy "org_sfs_program_overrides_select" on sfs_program_overrides
+  for select using (organization_id = auth_org_id());
+create policy "org_sfs_program_overrides_insert" on sfs_program_overrides
+  for insert with check (organization_id = auth_org_id());
+create policy "org_sfs_program_overrides_update" on sfs_program_overrides
+  for update using (organization_id = auth_org_id());
+
+create policy "org_sfs_service_overrides_select" on sfs_service_overrides
+  for select using (organization_id = auth_org_id());
+create policy "org_sfs_service_overrides_insert" on sfs_service_overrides
+  for insert with check (organization_id = auth_org_id());
+create policy "org_sfs_service_overrides_update" on sfs_service_overrides
+  for update using (organization_id = auth_org_id());
+
+create policy "org_sfs_grant_schedules_select" on sfs_grant_schedules
+  for select using (organization_id = auth_org_id());
+create policy "org_sfs_grant_schedules_insert" on sfs_grant_schedules
+  for insert with check (organization_id = auth_org_id());
+create policy "org_sfs_grant_schedules_update" on sfs_grant_schedules
+  for update using (organization_id = auth_org_id());
+
+create policy "org_sfs_payer_exclusions_select" on sfs_payer_exclusions
+  for select using (organization_id = auth_org_id());
+create policy "org_sfs_payer_exclusions_insert" on sfs_payer_exclusions
+  for insert with check (organization_id = auth_org_id());
+create policy "org_sfs_payer_exclusions_update" on sfs_payer_exclusions
+  for update using (organization_id = auth_org_id());
+
+create policy "org_sfs_retroactive_adj_select" on sfs_retroactive_adjustments
+  for select using (organization_id = auth_org_id());
+create policy "org_sfs_retroactive_adj_insert" on sfs_retroactive_adjustments
+  for insert with check (organization_id = auth_org_id());
