@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
+import SessionTimeout from "@/components/SessionTimeout";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -20,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
+      <SessionTimeout />
       <Sidebar orgName={org?.name} clientTermPlural={termPlural} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar firstName={user.firstName} lastName={user.lastName} role={profile?.role} />
