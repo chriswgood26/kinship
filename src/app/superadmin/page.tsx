@@ -5,12 +5,11 @@ import AdminClient from "./AdminClient";
 
 export const dynamic = "force-dynamic";
 
-// Only this Clerk user can access the superadmin
-const SUPERADMIN_CLERK_ID = "user_3BSMNyYBQNMxfQdtad4Bctoc0q2";
+const SUPERADMIN_IDS = process.env.SUPERADMIN_USER_IDS?.split(",") || [];
 
 export default async function SuperAdminPage() {
   const user = await currentUser();
-  if (!user || user.id !== SUPERADMIN_CLERK_ID) redirect("/dashboard");
+  if (!user || !SUPERADMIN_IDS.includes(user.id)) redirect("/dashboard");
 
   const [
     { data: orgs },

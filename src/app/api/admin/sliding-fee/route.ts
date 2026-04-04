@@ -6,6 +6,10 @@ import { DEFAULT_SFS_TIERS } from "@/lib/fpl";
 
 
 export async function GET() {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
+
   const { data } = await supabaseAdmin
     .from("sliding_fee_schedule")
     .select("*")

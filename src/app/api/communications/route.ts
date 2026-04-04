@@ -10,12 +10,13 @@ export async function GET(req: NextRequest) {
 
   const orgId = await getOrgId(userId);
   const patientId = req.nextUrl.searchParams.get("client_id");
-  const query = supabaseAdmin
+  let query = supabaseAdmin
     .from("client_communications")
     .select("*")
+    .eq("organization_id", orgId)
     .order("sent_at", { ascending: false })
     .limit(50);
-  if (patientId) query.eq("client_id", patientId);
+  if (patientId) query = query.eq("client_id", patientId);
   const { data } = await query;
   return NextResponse.json({ communications: data || [] });
 }
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
 
   const body = await req.json();
   const { client_id, channel, to_address, subject, message, trigger } = body;

@@ -2,16 +2,19 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFPLPercent } from "@/lib/fpl";
+import { getOrgId } from "@/lib/getOrgId";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const patientId = req.nextUrl.searchParams.get("client_id");
   if (!patientId) return NextResponse.json({ error: "client_id required" }, { status: 400 });
   const { data, error } = await supabaseAdmin
     .from("client_income_assessments")
     .select("*")
     .eq("client_id", patientId)
+    .eq("organization_id", orgId)
     .order("effective_date", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ assessments: data });
@@ -20,6 +23,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const body = await req.json();
   const { client_id, annual_income, family_size, verification_method, notes, effective_date } = body;
   if (!client_id || annual_income == null || !family_size) {
@@ -35,12 +39,14 @@ export async function POST(req: NextRequest) {
     .from("client_income_assessments")
     .update({ status: "superseded" })
     .eq("client_id", client_id)
+    .eq("organization_id", orgId)
     .eq("status", "active");
 
   const { data, error } = await supabaseAdmin
     .from("client_income_assessments")
     .insert({
       client_id,
+      organization_id: orgId,
       annual_income: Number(annual_income),
       family_size: Number(family_size),
       fpl_percent,

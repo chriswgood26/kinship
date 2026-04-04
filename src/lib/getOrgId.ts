@@ -1,11 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-// Fallback for demo/dev — single org
-const DEMO_ORG_ID = "34e600b3-beb0-440c-88c4-20032185e727";
-
 /**
  * Get the organization ID for a given Clerk user ID.
- * Falls back to the demo org ID if the user has no profile yet.
+ * Throws if no profile is found — prevents unknown users from accessing data.
  * Use this in ALL API routes instead of hardcoding the org ID.
  */
 export async function getOrgId(clerkUserId: string): Promise<string> {
@@ -15,7 +12,11 @@ export async function getOrgId(clerkUserId: string): Promise<string> {
     .eq("clerk_user_id", clerkUserId)
     .single();
 
-  return profile?.organization_id || DEMO_ORG_ID;
+  if (!profile?.organization_id) {
+    throw new Error("No organization found for user");
+  }
+
+  return profile.organization_id;
 }
 
 /**
@@ -28,8 +29,12 @@ export async function getUserProfile(clerkUserId: string) {
     .eq("clerk_user_id", clerkUserId)
     .single();
 
+  if (!profile?.organization_id) {
+    throw new Error("No organization found for user");
+  }
+
   return {
     profile,
-    orgId: profile?.organization_id || DEMO_ORG_ID,
+    orgId: profile.organization_id,
   };
 }

@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
 
+  const orgId = await getOrgId(userId);
   const isStaffReply = body.direction === "outbound";
 
   const { data, error } = await supabaseAdmin.from("portal_messages").insert({
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       const notifications = staff.map(s => ({
         user_clerk_id: s.clerk_user_id,
         type: "portal_message",
-        title: `Portal message from ${patient ? `${client.first_name} ${client.last_name}` : "a patient"}`,
+        title: `Portal message from ${patient ? `${patient.first_name} ${patient.last_name}` : "a patient"}`,
         message: body.body?.slice(0, 120) + (body.body?.length > 120 ? "..." : ""),
         entity_type: "portal_message",
         entity_id: data?.id || null,

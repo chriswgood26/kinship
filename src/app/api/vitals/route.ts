@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     .from("client_vitals")
     .select("*")
     .eq("client_id", patientId)
+    .eq("organization_id", orgId)
     .order("recorded_at", { ascending: false })
     .limit(50);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

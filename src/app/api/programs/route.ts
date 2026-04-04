@@ -5,6 +5,10 @@ import { getOrgId } from "@/lib/getOrgId";
 
 
 export async function GET() {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
+
   const { data } = await supabaseAdmin
     .from("programs")
     .select("*")
@@ -36,9 +40,10 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const body = await req.json();
   const { id, ...patch } = body;
-  const { data, error } = await supabaseAdmin.from("programs").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+  const { data, error } = await supabaseAdmin.from("programs").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).eq("organization_id", orgId).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ program: data });
 }
