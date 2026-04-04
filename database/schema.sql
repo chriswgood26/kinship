@@ -129,6 +129,17 @@ alter table appointments add column if not exists meeting_password text;
 alter table appointments add column if not exists telehealth_started_at timestamptz;
 alter table appointments add column if not exists telehealth_ended_at timestamptz;
 
+-- Migration: Scheduling Phase 2 — recurring, provider-only, calendar sync
+alter table appointments alter column client_id drop not null;
+alter table appointments add column if not exists provider_id uuid references user_profiles(id) on delete set null;
+alter table appointments add column if not exists is_provider_only boolean default false;
+alter table appointments add column if not exists recurrence_rule text;         -- e.g. FREQ=WEEKLY;BYDAY=MO,WE
+alter table appointments add column if not exists recurrence_end_date date;
+alter table appointments add column if not exists parent_appointment_id uuid references appointments(id) on delete cascade;
+alter table appointments add column if not exists is_recurring_instance boolean default false;
+create index if not exists idx_appointments_provider on appointments(provider_id) where provider_id is not null;
+create index if not exists idx_appointments_parent on appointments(parent_appointment_id) where parent_appointment_id is not null;
+
 -- Encounters
 create table if not exists encounters (
   id uuid primary key default gen_random_uuid(),
