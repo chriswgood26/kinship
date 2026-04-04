@@ -371,5 +371,46 @@ create table if not exists appointment_reminder_log (
   sent_at timestamptz default now()
 );
 
+create index if not exists idx_reminder_log_appointment_id
+  on appointment_reminder_log(appointment_id);
+
+-- Portal users (patients / authorized representatives with portal access)
+create table if not exists portal_users (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  clerk_user_id text unique,          -- Clerk user linked to this portal account
+  email text not null,
+  first_name text,
+  last_name text,
+  relationship text default 'self',   -- self, parent, guardian, caregiver, authorized_rep
+  is_active boolean default true,
+  access_settings jsonb default '{"messages": true, "appointments": true, "documents": false}',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_portal_users_org on portal_users(organization_id);
+create index if not exists idx_portal_users_client on portal_users(client_id);
+create index if not exists idx_portal_users_clerk on portal_users(clerk_user_id) where clerk_user_id is not null;
+
+-- Portal messages (bidirectional secure messaging between patients and staff)
+create table if not exists portal_messages (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  portal_user_id uuid references portal_users(id) on delete set null,
+  direction text not null check (direction in ('inbound', 'outbound')), -- inbound = patient→staff, outbound = staff→patient
+  subject text,
+  body text not null,
+  sender_clerk_id text,               -- Clerk user ID of sender (staff or portal user)
+  sender_name text,                   -- Display name of sender
+  is_read boolean default false,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_portal_messages_org on portal_messages(organization_id);
+create index if not exists idx_portal_messages_client on portal_messages(client_id, created_at desc);
+
 create index if not exists idx_reminder_log_appointment
   on appointment_reminder_log(appointment_id, reminder_type);

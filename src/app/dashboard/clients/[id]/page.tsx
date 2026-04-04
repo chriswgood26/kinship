@@ -3,6 +3,8 @@ import CareTeam from "@/components/CareTeam";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
+import ClientMessagesPanel from "./ClientMessagesPanel";
+import ClientTabNav from "./ClientTabNav";
 
 export const dynamic = "force-dynamic";
 
@@ -18,19 +20,29 @@ const InfoRow = ({ label, value }: { label: string; value: string | null | undef
   </div>
 );
 
-export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const user = await currentUser();
   if (!user) redirect("/sign-in");
 
   const { id } = await params;
+  const { tab } = await searchParams;
+  const activeTab = tab || "overview";
 
-  const [{ data: client }, { data: appointments }, { data: encounters }] = await Promise.all([
+  const [{ data: client }, { data: appointments }, { data: encounters }, { data: unreadMsgs }] = await Promise.all([
     supabaseAdmin.from("clients").select("*, primary_clinician:primary_clinician_id(id, first_name, last_name, credentials)").eq("id", id).single(),
     supabaseAdmin.from("appointments").select("*").eq("client_id", id).gte("appointment_date", new Date().toISOString().split("T")[0]).order("appointment_date").limit(3),
     supabaseAdmin.from("encounters").select("*").eq("client_id", id).order("encounter_date", { ascending: false }).limit(5),
+    supabaseAdmin.from("portal_messages").select("id").eq("client_id", id).eq("direction", "inbound").eq("is_read", false),
   ]);
 
   if (!client) notFound();
+  const unreadMessageCount = unreadMsgs?.length ?? 0;
 
   const age = calcAge(client.date_of_birth);
   const STATUS_COLORS: Record<string, string> = {
@@ -69,7 +81,16 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      {/* Tab navigation */}
+      <ClientTabNav clientId={id} activeTab={activeTab} unreadMessageCount={unreadMessageCount} />
+
+      {/* Messages tab */}
+      {activeTab === "messages" && (
+        <ClientMessagesPanel clientId={id} />
+      )}
+
+      {/* Overview tab */}
+      {activeTab === "overview" && <div className="grid grid-cols-3 gap-5">
         {/* Left col */}
         <div className="col-span-2 space-y-5">
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
@@ -156,7 +177,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             </dl>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
