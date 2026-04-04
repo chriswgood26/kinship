@@ -22,6 +22,7 @@ export type AuditResourceType =
   | "portal_message"
   | "client_program"
   | "treatment_plan"
+  | "safety_plan"
   | "document"
   | "appointment";
 

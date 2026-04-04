@@ -271,6 +271,35 @@ create table if not exists feedback (
   created_at timestamptz default now()
 );
 
+-- Safety Plans (CCBHC-required, builds on C-SSRS)
+create table if not exists safety_plans (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  cssrs_screening_id uuid references screenings(id) on delete set null,
+  risk_level text,                           -- Low Risk, Moderate Risk, High Risk, Imminent Risk
+  warning_signs text[] default '{}',         -- personal warning signs
+  internal_coping_strategies text[] default '{}',
+  social_contacts jsonb default '[]',        -- [{name, phone, relationship}]
+  support_contacts jsonb default '[]',       -- [{name, phone, relationship}]
+  professional_contacts jsonb default '[]',  -- [{name, phone, agency}]
+  crisis_line_included boolean default true,
+  means_restriction_discussed boolean default false,
+  means_restriction_notes text,
+  reasons_for_living text,
+  client_agreement boolean default false,
+  client_signature_date date,
+  clinician_name text,
+  clinician_credentials text,
+  clinician_signature_date date,
+  follow_up_date date,
+  notes text,
+  status text default 'active',              -- active, revised, superseded
+  created_by_clerk_id text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 -- Add addons column to organizations
 alter table organizations add column if not exists addons text[] default '{}';
 

@@ -22,6 +22,7 @@ export default async function ScreeningsPage() {
 
   const phq9Count = screenings?.filter(s => s.tool === "phq9").length || 0;
   const gad7Count = screenings?.filter(s => s.tool === "gad7").length || 0;
+  const cssrsCount = screenings?.filter(s => s.tool === "cssrs").length || 0;
   const siAlerts = screenings?.filter(s => s.tool === "phq9" && (s.answers?.q9 || 0) > 0).length || 0;
 
   return (
@@ -91,6 +92,10 @@ export default async function ScreeningsPage() {
               <div className="font-bold text-slate-900 text-lg">C-SSRS</div>
               <div className="text-sm text-slate-500">Columbia Suicide Severity Rating Scale</div>
             </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{cssrsCount}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
           </div>
           <div className="text-xs text-slate-500 mb-3">4 subscales · Ideation, Intensity, Behavior, Risk Level</div>
           <div className="flex flex-wrap gap-1 mb-4">
@@ -98,9 +103,14 @@ export default async function ScreeningsPage() {
               <span key={l} className="text-xs bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full font-medium">{l}</span>
             ))}
           </div>
-          <Link href="/dashboard/screenings/cssrs/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors">
-            Administer C-SSRS →
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/dashboard/screenings/cssrs/new" className="flex-1 text-center py-2 rounded-xl text-sm font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors">
+              Administer C-SSRS →
+            </Link>
+            <Link href="/dashboard/safety-plans" className="text-center py-2 px-3 rounded-xl text-sm font-semibold border border-red-200 text-red-700 hover:bg-red-50 transition-colors">
+              🛡️ Plans
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -126,9 +136,16 @@ export default async function ScreeningsPage() {
             <tbody className="divide-y divide-slate-50">
               {screenings.map(s => {
                 const client = Array.isArray(s.client) ? s.client[0] : s.client;
+                const isCSSRS = s.tool === "cssrs";
                 const tool = s.tool === "phq9" ? PHQ9 : GAD7;
-                const severity = getSeverity(s.total_score || 0, tool);
+                const severity = isCSSRS ? null : getSeverity(s.total_score || 0, tool);
                 const hasSI = s.tool === "phq9" && (s.answers?.q9 || 0) > 0;
+                const cssrsRiskColors: Record<string, string> = {
+                  "Low Risk": "bg-emerald-100 text-emerald-700",
+                  "Moderate Risk": "bg-amber-100 text-amber-700",
+                  "High Risk": "bg-orange-100 text-orange-700",
+                  "Imminent Risk": "bg-red-100 text-red-700",
+                };
                 return (
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-5 py-3.5">
@@ -136,15 +153,29 @@ export default async function ScreeningsPage() {
                       <div className="text-xs text-slate-400">{client?.mrn || "—"}</div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.tool === "phq9" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.tool === "phq9" ? "bg-blue-100 text-blue-700" : s.tool === "cssrs" ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700"}`}>
                         {s.tool?.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{s.administered_at ? new Date(s.administered_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
-                    <td className="px-4 py-3.5 text-2xl font-bold text-slate-900">{s.total_score ?? "—"}<span className="text-sm font-normal text-slate-400">/{tool.maxScore}</span></td>
+                    <td className="px-4 py-3.5 text-2xl font-bold text-slate-900">
+                      {isCSSRS ? (
+                        <span className="text-sm font-semibold text-slate-500">Level {s.total_score ?? "—"}</span>
+                      ) : (
+                        <>{s.total_score ?? "—"}<span className="text-sm font-normal text-slate-400">/{tool.maxScore}</span></>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${severity.color}`}>{severity.label}</span>
-                      {hasSI && <span className="ml-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">🚨 SI</span>}
+                      {isCSSRS ? (
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${cssrsRiskColors[s.severity_label || ""] || "bg-slate-100 text-slate-600"}`}>
+                          {s.severity_label || "—"}
+                        </span>
+                      ) : (
+                        <>
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${severity?.color}`}>{severity?.label}</span>
+                          {hasSI && <span className="ml-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">🚨 SI</span>}
+                        </>
+                      )}
                     </td>
                     <td className="px-4 py-3.5">
                       <Link href={`/dashboard/screenings/${s.tool}/${s.id}`} className="text-teal-600 text-sm font-medium hover:text-teal-700">View →</Link>
