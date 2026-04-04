@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getOrgId } from "@/lib/getOrgId";
 
 export const dynamic = "force-dynamic";
 
-const ORG_ID = orgId;
 
 function getFPLLabel(pct: number) {
   if (pct <= 100) return "≤100% FPL";
@@ -27,15 +27,10 @@ function fplColor(pct: number) {
 export default async function FinancialEligibilityPage({
   searchParams,
 }: { searchParams: Promise<{ filter?: string }> }) {
-  const user = await currentUser();
-  if (!user) redirect("/sign-in");
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
 
-  const { data: _profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id")
-    .eq("clerk_user_id", user.id)
-    .single();
-  const orgId = _profile?.organization_id || profile?.organization_id || "";
+  const orgId = await getOrgId(userId);
 
 
   const params = await searchParams;
@@ -45,7 +40,7 @@ export default async function FinancialEligibilityPage({
   const { data: patients } = await supabaseAdmin
     .from("clients")
     .select("id, first_name, last_name, mrn, insurance_provider, insurance_member_id, status")
-    .eq("organization_id", ORG_ID)
+    .eq("organization_id", orgId)
     .eq("status", "active")
     .order("last_name");
 

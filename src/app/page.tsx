@@ -11,7 +11,7 @@ export default function HomePage() {
           <span className="font-bold text-slate-900 text-lg">Kinship <span className="font-light text-slate-400">EHR</span></span>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/sign-in" className="text-slate-600 text-sm font-medium hover:text-slate-900">Sign in</Link>
+          <a href="#waitlist" className="text-slate-600 text-sm font-medium hover:text-slate-900">Sign in</a>
           <a href="#waitlist" className="bg-teal-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400">Get early access</a>
         </div>
       </nav>
@@ -32,9 +32,9 @@ export default function HomePage() {
           <a href="#waitlist" className="bg-teal-500 text-white px-8 py-3.5 rounded-2xl font-semibold hover:bg-teal-400 transition-colors text-lg">
             Get early access →
           </a>
-          <Link href="/sign-in" className="border border-slate-200 text-slate-600 px-8 py-3.5 rounded-2xl font-semibold hover:bg-slate-50 transition-colors text-lg">
+          <a href="#waitlist" className="border border-slate-200 text-slate-600 px-8 py-3.5 rounded-2xl font-semibold hover:bg-slate-50 transition-colors text-lg">
             Sign in
-          </Link>
+          </a>
         </div>
       </div>
 

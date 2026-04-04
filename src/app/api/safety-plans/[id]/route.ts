@@ -2,42 +2,36 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { logAuditEvent, getRequestIp, getRequestUserAgent } from "@/lib/auditLog";
+import { getUserProfile } from "@/lib/getOrgId";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-
-  const { data: profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id, first_name, last_name")
-    .eq("clerk_user_id", userId)
-    .single();
+  const { profile, orgId } = await getUserProfile(userId);
 
   const { data, error } = await supabaseAdmin
     .from("safety_plans")
     .select("*, client:client_id(id, first_name, last_name, mrn, preferred_name, date_of_birth, phone_primary)")
     .eq("id", id)
-    .eq("organization_id", profile?.organization_id || "")
+    .eq("organization_id", orgId)
     .single();
 
   if (error || !data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (profile?.organization_id) {
-    await logAuditEvent({
-      organization_id: profile.organization_id,
-      user_clerk_id: userId,
-      user_name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : null,
-      action: "view",
-      resource_type: "safety_plan",
-      resource_id: id,
-      client_id: data.client_id,
-      description: `Viewed safety plan ${id}`,
-      ip_address: getRequestIp(req),
-      user_agent: getRequestUserAgent(req),
-    });
-  }
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    user_name: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim(),
+    action: "view",
+    resource_type: "safety_plan",
+    resource_id: id,
+    client_id: data.client_id,
+    description: `Viewed safety plan ${id}`,
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
 
   return NextResponse.json({ safety_plan: data });
 }
@@ -49,11 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
 
-  const { data: profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id, first_name, last_name")
-    .eq("clerk_user_id", userId)
-    .single();
+  const { profile, orgId } = await getUserProfile(userId);
 
   // Allowlist fields that can be updated
   const allowed = [
@@ -73,26 +63,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .from("safety_plans")
     .update(updates)
     .eq("id", id)
-    .eq("organization_id", profile?.organization_id || "")
+    .eq("organization_id", orgId)
     .select()
     .single();
 
   if (error || !data) return NextResponse.json({ error: error?.message || "Not found" }, { status: 500 });
 
-  if (profile?.organization_id) {
-    await logAuditEvent({
-      organization_id: profile.organization_id,
-      user_clerk_id: userId,
-      user_name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : null,
-      action: "update",
-      resource_type: "safety_plan",
-      resource_id: id,
-      client_id: data.client_id,
-      description: `Updated safety plan ${id}`,
-      ip_address: getRequestIp(req),
-      user_agent: getRequestUserAgent(req),
-    });
-  }
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    user_name: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim(),
+    action: "update",
+    resource_type: "safety_plan",
+    resource_id: id,
+    client_id: data.client_id,
+    description: `Updated safety plan ${id}`,
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
 
   return NextResponse.json({ safety_plan: data });
 }

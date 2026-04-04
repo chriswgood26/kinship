@@ -474,3 +474,166 @@ create index if not exists idx_phi_audit_logs_user
 create index if not exists idx_phi_audit_logs_client
   on phi_audit_logs(client_id, created_at desc)
   where client_id is not null;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Row Level Security (RLS) — Multi-tenant PHI isolation
+-- Scopes all PHI table access to the authenticated user's organization.
+-- The app uses the service role key (bypasses RLS), but these policies
+-- enforce isolation for any anon/user-key queries and add defense-in-depth.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Enable RLS on all PHI tables
+alter table clients enable row level security;
+alter table appointments enable row level security;
+alter table encounters enable row level security;
+alter table clinical_notes enable row level security;
+alter table treatment_plans enable row level security;
+alter table charges enable row level security;
+alter table screenings enable row level security;
+alter table safety_plans enable row level security;
+alter table documents enable row level security;
+alter table referrals enable row level security;
+alter table clearinghouse_submissions enable row level security;
+alter table era_remittances enable row level security;
+alter table era_payment_lines enable row level security;
+alter table portal_users enable row level security;
+alter table portal_messages enable row level security;
+alter table phi_audit_logs enable row level security;
+alter table user_profiles enable row level security;
+
+-- Helper function: returns the organization_id for the authenticated Clerk user
+-- Stored in user_profiles keyed by clerk_user_id JWT claim
+create or replace function auth_org_id() returns uuid
+  language sql stable security definer
+as $$
+  select organization_id
+  from user_profiles
+  where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub')
+  limit 1;
+$$;
+
+-- clients: users can only see/modify clients in their org
+create policy "org_clients_select" on clients
+  for select using (organization_id = auth_org_id());
+create policy "org_clients_insert" on clients
+  for insert with check (organization_id = auth_org_id());
+create policy "org_clients_update" on clients
+  for update using (organization_id = auth_org_id());
+
+-- appointments
+create policy "org_appointments_select" on appointments
+  for select using (organization_id = auth_org_id());
+create policy "org_appointments_insert" on appointments
+  for insert with check (organization_id = auth_org_id());
+create policy "org_appointments_update" on appointments
+  for update using (organization_id = auth_org_id());
+
+-- encounters
+create policy "org_encounters_select" on encounters
+  for select using (organization_id = auth_org_id());
+create policy "org_encounters_insert" on encounters
+  for insert with check (organization_id = auth_org_id());
+create policy "org_encounters_update" on encounters
+  for update using (organization_id = auth_org_id());
+
+-- clinical_notes: scoped through encounters
+create policy "org_clinical_notes_select" on clinical_notes
+  for select using (
+    encounter_id in (select id from encounters where organization_id = auth_org_id())
+  );
+create policy "org_clinical_notes_insert" on clinical_notes
+  for insert with check (
+    encounter_id in (select id from encounters where organization_id = auth_org_id())
+  );
+create policy "org_clinical_notes_update" on clinical_notes
+  for update using (
+    encounter_id in (select id from encounters where organization_id = auth_org_id())
+  );
+
+-- treatment_plans
+create policy "org_treatment_plans_select" on treatment_plans
+  for select using (organization_id = auth_org_id());
+create policy "org_treatment_plans_insert" on treatment_plans
+  for insert with check (organization_id = auth_org_id());
+create policy "org_treatment_plans_update" on treatment_plans
+  for update using (organization_id = auth_org_id());
+
+-- charges
+create policy "org_charges_select" on charges
+  for select using (organization_id = auth_org_id());
+create policy "org_charges_insert" on charges
+  for insert with check (organization_id = auth_org_id());
+create policy "org_charges_update" on charges
+  for update using (organization_id = auth_org_id());
+
+-- screenings
+create policy "org_screenings_select" on screenings
+  for select using (organization_id = auth_org_id());
+create policy "org_screenings_insert" on screenings
+  for insert with check (organization_id = auth_org_id());
+
+-- safety_plans
+create policy "org_safety_plans_select" on safety_plans
+  for select using (organization_id = auth_org_id());
+create policy "org_safety_plans_insert" on safety_plans
+  for insert with check (organization_id = auth_org_id());
+create policy "org_safety_plans_update" on safety_plans
+  for update using (organization_id = auth_org_id());
+
+-- documents
+create policy "org_documents_select" on documents
+  for select using (organization_id = auth_org_id());
+create policy "org_documents_insert" on documents
+  for insert with check (organization_id = auth_org_id());
+
+-- referrals
+create policy "org_referrals_select" on referrals
+  for select using (organization_id = auth_org_id());
+create policy "org_referrals_insert" on referrals
+  for insert with check (organization_id = auth_org_id());
+create policy "org_referrals_update" on referrals
+  for update using (organization_id = auth_org_id());
+
+-- clearinghouse_submissions
+create policy "org_clearinghouse_submissions_select" on clearinghouse_submissions
+  for select using (organization_id = auth_org_id());
+create policy "org_clearinghouse_submissions_insert" on clearinghouse_submissions
+  for insert with check (organization_id = auth_org_id());
+create policy "org_clearinghouse_submissions_update" on clearinghouse_submissions
+  for update using (organization_id = auth_org_id());
+
+-- era_remittances
+create policy "org_era_remittances_select" on era_remittances
+  for select using (organization_id = auth_org_id());
+create policy "org_era_remittances_insert" on era_remittances
+  for insert with check (organization_id = auth_org_id());
+
+-- era_payment_lines
+create policy "org_era_payment_lines_select" on era_payment_lines
+  for select using (organization_id = auth_org_id());
+create policy "org_era_payment_lines_insert" on era_payment_lines
+  for insert with check (organization_id = auth_org_id());
+create policy "org_era_payment_lines_update" on era_payment_lines
+  for update using (organization_id = auth_org_id());
+
+-- portal_users
+create policy "org_portal_users_select" on portal_users
+  for select using (organization_id = auth_org_id());
+create policy "org_portal_users_insert" on portal_users
+  for insert with check (organization_id = auth_org_id());
+create policy "org_portal_users_update" on portal_users
+  for update using (organization_id = auth_org_id());
+
+-- portal_messages
+create policy "org_portal_messages_select" on portal_messages
+  for select using (organization_id = auth_org_id());
+create policy "org_portal_messages_insert" on portal_messages
+  for insert with check (organization_id = auth_org_id());
+
+-- phi_audit_logs (read-only for users; only service role can insert)
+create policy "org_phi_audit_logs_select" on phi_audit_logs
+  for select using (organization_id = auth_org_id());
+
+-- user_profiles: users can read profiles within their own org
+create policy "org_user_profiles_select" on user_profiles
+  for select using (organization_id = auth_org_id());

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getOrgId } from "@/lib/getOrgId";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,10 @@ const STATUS_COLORS: Record<string, string> = {
 export default async function BillingPage({
   searchParams,
 }: { searchParams: Promise<{ status?: string }> }) {
-  const user = await currentUser();
-  if (!user) redirect("/sign-in");
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
 
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", user.id).single();
-  const orgId = profile?.organization_id;
+  const orgId = await getOrgId(userId);
 
   const params = await searchParams;
   const status = params.status || "";
@@ -28,7 +28,7 @@ export default async function BillingPage({
   let query = supabaseAdmin
     .from("charges")
     .select("*, client:client_id(first_name, last_name, mrn)")
-    .eq("organization_id", orgId || "")
+    .eq("organization_id", orgId)
     .order("service_date", { ascending: false })
     .limit(50);
 
@@ -47,9 +47,14 @@ export default async function BillingPage({
           <h1 className="text-2xl font-bold text-slate-900">Billing</h1>
           <p className="text-slate-500 text-sm mt-0.5">Charge capture and revenue tracking</p>
         </div>
-        <Link href="/dashboard/billing/new" className="bg-teal-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-400 transition-colors text-sm">
-          + Add Charge
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/billing/clearinghouse" className="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-200 transition-colors text-sm border border-slate-200">
+            Clearinghouse
+          </Link>
+          <Link href="/dashboard/billing/new" className="bg-teal-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-400 transition-colors text-sm">
+            + Add Charge
+          </Link>
+        </div>
       </div>
 
       {/* Summary */}

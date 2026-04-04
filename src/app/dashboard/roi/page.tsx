@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getOrgId } from "@/lib/getOrgId";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +21,10 @@ const DIRECTION_COLORS: Record<string, string> = {
 export default async function ROIPage({
   searchParams,
 }: { searchParams: Promise<{ client_id?: string; status?: string }> }) {
-  const user = await currentUser();
-  if (!user) redirect("/sign-in");
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
 
-  const { data: _profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id")
-    .eq("clerk_user_id", user.id)
-    .single();
-  const orgId = _profile?.organization_id || profile?.organization_id || "";
+  const orgId = await getOrgId(userId);
 
 
   const params = await searchParams;
@@ -142,8 +138,8 @@ export default async function ROIPage({
                   <tr key={roi.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-4">
                       <Link href={`/dashboard/clients/${roi.client_id}`} className="no-underline">
-                        <div className="font-semibold text-sm text-slate-900 hover:text-teal-600">{patient ? `${client.last_name}, ${client.first_name}` : "—"}</div>
-                        <div className="text-xs text-slate-400">{patient?.mrn || "—"}</div>
+                        <div className="font-semibold text-sm text-slate-900 hover:text-teal-600">{roi.patient ? `${roi.patient.last_name}, ${roi.patient.first_name}` : "—"}</div>
+                        <div className="text-xs text-slate-400">{roi.patient?.mrn || "—"}</div>
                       </Link>
                     </td>
                     <td className="px-4 py-4">

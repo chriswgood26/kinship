@@ -2,13 +2,13 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendAppointmentReminder } from "@/lib/appointmentReminders";
+import { getOrgId } from "@/lib/getOrgId";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", userId).single();
-  const orgId = profile?.organization_id;
+  const orgId = await getOrgId(userId);
   const { data, error } = await supabaseAdmin
     .from("appointments")
     .insert({

@@ -5,7 +5,7 @@ export async function sendEmail({
   to,
   subject,
   html,
-  from = "DrCloud Neo <noreply@drcloud-neo.com>",
+  from = "Kinship EHR <hello@kinshipehr.com>",
 }: {
   to: string;
   subject: string;

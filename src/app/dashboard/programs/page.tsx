@@ -175,11 +175,11 @@ export default function ProgramsPage() {
                       {activeEnrollments.map(e => (
                         <tr key={e.id} className="hover:bg-slate-50">
                           <td className="px-5 py-3">
-                            <Link href={`/dashboard/clients/${e.client.id}`} className="font-semibold text-slate-900 hover:text-teal-600">
-                              {e.client.last_name}, {e.client.first_name}
-                              {e.client.preferred_name && <span className="text-slate-400 font-normal ml-1">"{e.client.preferred_name}"</span>}
+                            <Link href={`/dashboard/clients/${e.patient.id}`} className="font-semibold text-slate-900 hover:text-teal-600">
+                              {e.patient.last_name}, {e.patient.first_name}
+                              {e.patient.preferred_name && <span className="text-slate-400 font-normal ml-1">"{e.patient.preferred_name}"</span>}
                             </Link>
-                            <div className="text-xs text-slate-400">MRN: {e.client.mrn || "—"}</div>
+                            <div className="text-xs text-slate-400">MRN: {e.patient.mrn || "—"}</div>
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">{new Date(e.admission_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                           <td className="px-4 py-3 text-sm text-slate-600">{e.assigned_worker || "—"}</td>

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { logAuditEvent, getRequestIp, getRequestUserAgent } from "@/lib/auditLog";
+import { getUserProfile } from "@/lib/getOrgId";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
@@ -10,16 +11,12 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const client_id = url.searchParams.get("client_id");
 
-  const { data: profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id, first_name, last_name")
-    .eq("clerk_user_id", userId)
-    .single();
+  const { profile, orgId } = await getUserProfile(userId);
 
   let query = supabaseAdmin
     .from("safety_plans")
     .select("*, client:client_id(id, first_name, last_name, mrn, preferred_name)")
-    .eq("organization_id", profile?.organization_id || "")
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -28,19 +25,17 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  if (profile?.organization_id) {
-    await logAuditEvent({
-      organization_id: profile.organization_id,
-      user_clerk_id: userId,
-      user_name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : null,
-      action: "view",
-      resource_type: "safety_plan",
-      client_id: client_id ?? null,
-      description: client_id ? `Viewed safety plans for client ${client_id}` : "Viewed safety plan list",
-      ip_address: getRequestIp(req),
-      user_agent: getRequestUserAgent(req),
-    });
-  }
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    user_name: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim(),
+    action: "view",
+    resource_type: "safety_plan",
+    client_id: client_id ?? null,
+    description: client_id ? `Viewed safety plans for client ${client_id}` : "Viewed safety plan list",
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
 
   return NextResponse.json({ safety_plans: data || [] });
 }
@@ -52,16 +47,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   if (!body.client_id) return NextResponse.json({ error: "client_id required" }, { status: 400 });
 
-  const { data: profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id, first_name, last_name")
-    .eq("clerk_user_id", userId)
-    .single();
+  const { profile, orgId } = await getUserProfile(userId);
 
   const { data, error } = await supabaseAdmin
     .from("safety_plans")
     .insert({
-      organization_id: profile?.organization_id,
+      organization_id: orgId,
       client_id: body.client_id,
       cssrs_screening_id: body.cssrs_screening_id || null,
       risk_level: body.risk_level || null,
@@ -89,20 +80,18 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  if (profile?.organization_id) {
-    await logAuditEvent({
-      organization_id: profile.organization_id,
-      user_clerk_id: userId,
-      user_name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : null,
-      action: "create",
-      resource_type: "safety_plan",
-      resource_id: data?.id ?? null,
-      client_id: body.client_id,
-      description: `Created safety plan for client ${body.client_id}${body.risk_level ? ` (${body.risk_level})` : ""}`,
-      ip_address: getRequestIp(req),
-      user_agent: getRequestUserAgent(req),
-    });
-  }
+  await logAuditEvent({
+    organization_id: orgId,
+    user_clerk_id: userId,
+    user_name: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim(),
+    action: "create",
+    resource_type: "safety_plan",
+    resource_id: data?.id ?? null,
+    client_id: body.client_id,
+    description: `Created safety plan for client ${body.client_id}${body.risk_level ? ` (${body.risk_level})` : ""}`,
+    ip_address: getRequestIp(req),
+    user_agent: getRequestUserAgent(req),
+  });
 
   return NextResponse.json({ safety_plan: data }, { status: 201 });
 }
