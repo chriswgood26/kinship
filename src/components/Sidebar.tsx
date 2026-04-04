@@ -2,64 +2,182 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import InboxBadge from "@/components/InboxBadge";
+import CommunicationBadgeCount from "@/components/CommunicationBadgeCount";
+import ROIBadge from "@/components/ROIBadge";
+import type { Terminology } from "@/lib/terminology";
 
-interface Props {
-  orgName?: string | null;
-  clientTermPlural?: string;
-}
+interface NavItem { href: string; label: string; icon: string; exact?: boolean; inboxBadge?: boolean; roles?: string[]; }
+interface NavSection { label: string | null; icon?: string; items: NavItem[]; defaultOpen?: boolean; roles?: string[]; }
 
-const NAV_SECTIONS = [
+const navSections: NavSection[] = [
   {
     label: null,
-    items: [{ href: "/dashboard", label: "Dashboard", icon: "🏠", exact: true }],
-  },
-  {
-    label: "Care",
+    defaultOpen: true,
     items: [
-      { href: "/dashboard/clients", label: "Clients", icon: "👤" },
-      { href: "/dashboard/scheduling", label: "Scheduling", icon: "📅" },
-      { href: "/dashboard/encounters", label: "Encounters", icon: "⚕️" },
+      { href: "/dashboard", label: "Dashboard", icon: "🏠", exact: true as const },
     ],
   },
   {
-    label: "Finance",
+    label: "Clients & Intake",
+    icon: "👤",
+    defaultOpen: true,
     items: [
-      { href: "/dashboard/billing", label: "Billing", icon: "💰" },
+      { href: "/dashboard/referrals", label: "Referrals", icon: "🔄" },
+      { href: "/dashboard/clients", label: "Clients", icon: "👤" },
+      { href: "/dashboard/scheduling", label: "Scheduling", icon: "📅" },
+      { href: "/dashboard/telehealth", label: "Telehealth", icon: "🎥" },
+      { href: "/dashboard/inbox", label: "Messages", icon: "💬", inboxBadge: true },
+      { href: "/dashboard/financial-eligibility", label: "Financial Eligibility", icon: "💲" },
+      { href: "/dashboard/authorizations", label: "Authorizations", icon: "🔐" },
     ],
   },
   {
     label: "Clinical",
+    icon: "⚕️",
+    defaultOpen: true,
     items: [
+      { href: "/dashboard/encounters", label: "Encounters", icon: "⚕️" },
+      { href: "/dashboard/assessments", label: "Assessments", icon: "📊" },
       { href: "/dashboard/treatment-plans", label: "Treatment Plans", icon: "📋" },
-      { href: "/dashboard/screenings", label: "Screenings", icon: "📊" },
+      { href: "/dashboard/notes", label: "Clinical Notes", icon: "📝" },
+      { href: "/dashboard/screenings", label: "Screenings", icon: "🔬" },
       { href: "/dashboard/safety-plans", label: "Safety Plans", icon: "🛡️" },
-      { href: "/dashboard/supervisor", label: "Supervisor Review", icon: "✅" },
+      { href: "/dashboard/isp", label: "Support Plans (ISP)", icon: "🧩" },
+      { href: "/dashboard/dd-notes", label: "DD Progress Notes", icon: "📝" },
+      { href: "/dashboard/emar", label: "eMAR", icon: "💊" },
+      { href: "/dashboard/supervisor", label: "Supervisor Review", icon: "✅", roles: ["supervisor", "admin"] },
+      { href: "/dashboard/incidents", label: "Incident Reports", icon: "🚨" },
     ],
   },
   {
-    label: "Insights",
+    label: "Residential",
+    icon: "🏠",
+    defaultOpen: false,
+    items: [
+      { href: "/dashboard/beds", label: "Bed Management", icon: "🏠" },
+    ],
+  },
+  {
+    label: "Billing",
+    icon: "💰",
+    defaultOpen: true,
+    roles: ["admin", "billing", "supervisor", "clinician", "care_coordinator", "receptionist"],
+    items: [
+      { href: "/dashboard/billing", label: "Charges & Claims", icon: "💰" },
+      { href: "/dashboard/billing/invoices", label: "Client Invoices", icon: "🧾" },
+    ],
+  },
+  {
+    label: "Reporting",
+    defaultOpen: false,
     items: [
       { href: "/dashboard/reports", label: "Reports", icon: "📊" },
+      { href: "/dashboard/reports/emar", label: "eMAR Compliance", icon: "💊" },
+      { href: "/dashboard/timesheet", label: "Timesheet", icon: "⏱️" },
     ],
   },
   {
     label: "Admin",
+    defaultOpen: false,
     items: [
-      { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
+      { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
+      { href: "/dashboard/portal", label: "Client Portal", icon: "🌐" },
+      { href: "/dashboard/admin/settings", label: "Settings", icon: "⚙️" },
+      { href: "/dashboard/admin/field-config", label: "Field Configuration", icon: "🔧", roles: ["admin"] },
+      { href: "/dashboard/migration", label: "Migration Planner", icon: "🔄", roles: ["admin"] },
+      { href: "/dashboard/admin/sliding-fee", label: "Sliding Fee", icon: "💲" },
+      { href: "/dashboard/admin/clearinghouse", label: "Clearinghouse", icon: "🏥" },
+      { href: "/dashboard/admin/communications", label: "Communications", icon: "📣" },
+      { href: "/dashboard/programs", label: "Programs & Services", icon: "🏥" },
       { href: "/dashboard/feedback", label: "Submit Feedback", icon: "💬" },
     ],
   },
 ];
 
-export default function Sidebar({ orgName, clientTermPlural = "Clients" }: Props) {
+export default function Sidebar({ terminology, userRole = "clinician" }: { terminology?: Terminology; userRole?: string }) {
+  const [localTerm, setLocalTerm] = useState<Terminology | undefined>(terminology);
   const pathname = usePathname();
 
-  const sections = NAV_SECTIONS.map(section => ({
-    ...section,
-    items: section.items.map(item =>
-      item.label === "Clients" ? { ...item, label: clientTermPlural } : item
-    ),
-  }));
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("drcloud_terminology");
+      if (saved) {
+        import("@/lib/terminology").then(({ getTerminology }) => {
+          setLocalTerm(getTerminology(saved));
+        });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    function handleChange(e: Event) {
+      const val = (e as CustomEvent<string>).detail;
+      if (val) {
+        import("@/lib/terminology").then(({ getTerminology }) => {
+          setLocalTerm(getTerminology(val));
+        });
+      }
+    }
+    window.addEventListener("drcloud_terminology_change", handleChange);
+    return () => window.removeEventListener("drcloud_terminology_change", handleChange);
+  }, []);
+
+  const term = localTerm || terminology || { singular: "Client", plural: "Clients", value: "client", adjective: "Client" };
+
+  const [pinned, setPinned] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("drcloud_sidebar_pinned") === "true";
+  });
+  const [hovered, setHovered] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isExpanded = pinned || hovered || mobileOpen;
+
+  function togglePin() {
+    setPinned(prev => {
+      const next = !prev;
+      try { localStorage.setItem("drcloud_sidebar_pinned", String(next)); } catch {}
+      return next;
+    });
+  }
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navSections.forEach((s, i) => {
+      initial[s.label || `section-${i}`] = s.defaultOpen !== false;
+    });
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("drcloud_sidebar_sections") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, boolean>;
+        return { ...initial, ...parsed };
+      }
+    } catch {}
+    return initial;
+  });
+
+  function toggleSection(label: string) {
+    setOpenSections(prev => {
+      const next = { ...prev, [label]: !prev[label] };
+      try { localStorage.setItem("drcloud_sidebar_sections", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  const sections = navSections
+    .filter(section => !section.roles || section.roles.includes(userRole))
+    .map(section => ({
+      ...section,
+      label: section.label === "Clients & Intake" ? `${term.plural} & Intake` : section.label,
+      items: section.items
+        .filter(item => !item.roles || item.roles.includes(userRole))
+        .map(item =>
+          item.href === "/dashboard/clients"
+            ? { ...item, label: term.plural }
+            : item
+        ),
+    }));
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -67,59 +185,127 @@ export default function Sidebar({ orgName, clientTermPlural = "Clients" }: Props
   }
 
   return (
-    <div className="w-56 bg-white border-r border-slate-200 flex flex-col h-full flex-shrink-0">
+    <>
+    {!mobileOpen && (
+      <button onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed top-3 left-3 z-50 w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm no-print"
+        aria-label="Open menu">
+        <span className="text-slate-600 text-lg">☰</span>
+      </button>
+    )}
+
+    {mobileOpen && (
+      <div className="md:hidden fixed inset-0 bg-black/40 z-40 no-print" onClick={() => setMobileOpen(false)} />
+    )}
+
+    <div
+      className={`flex flex-col h-full no-print bg-white border-r border-slate-200 transition-all duration-200
+        ${isExpanded ? "w-60" : "w-14"}
+        ${mobileOpen ? "fixed inset-y-0 left-0 z-50 shadow-xl" : "hidden md:flex"}
+        ${!mobileOpen && !pinned && !hovered ? "md:flex" : ""}
+      `}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {/* Logo */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-xs">K</div>
-          <span className="font-bold text-slate-900">Kinship <span className="font-light text-slate-400">EHR</span></span>
-        </div>
-        {orgName && <div className="text-xs text-slate-400 mt-1 truncate">{orgName}</div>}
+      <div className={`border-b border-slate-200 flex items-center justify-between ${isExpanded ? "px-5 py-3" : "px-2 py-3 justify-center"}`}>
+        {isExpanded ? (
+          <>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-xs">K</div>
+              <span className="font-bold text-slate-900">Kinship <span className="font-light text-slate-400">EHR</span></span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={togglePin} title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+                className="hidden md:block text-slate-400 hover:text-slate-600 transition-colors p-1 rounded">
+                {pinned ? "📌" : "📍"}
+              </button>
+              <button onClick={() => setMobileOpen(false)}
+                className="md:hidden text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
+                aria-label="Close menu">
+                ✕
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-0.5">
-        {sections.map((section, si) => (
-          <div key={si} className={si > 0 ? "pt-3" : ""}>
-            {section.label && (
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-1.5">{section.label}</p>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map(item => (
-                <Link key={item.href} href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                    isActive(item.href, (item as {exact?: boolean}).exact)
-                      ? "bg-[#0d1b2e] text-white"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                  }`}>
-                  <span>{item.icon}</span>
-                  {item.label}
-                </Link>
-              ))}
+      <nav className="flex-1 px-3 py-3 overflow-y-auto">
+        {sections.map((section, si) => {
+          const sectionKey = section.label || `section-${si}`;
+          const isOpen = openSections[sectionKey] !== false;
+
+          return (
+            <div key={si} className={si > 0 ? "pt-2" : ""}>
+              {section.label && (
+                isExpanded ? (
+                  <button
+                    onClick={() => toggleSection(sectionKey)}
+                    className="w-full flex items-center justify-between px-3 py-1.5 mb-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">
+                    <span className="flex items-center gap-2">
+                      {section.label}
+                      {section.label === "Communication" && <CommunicationBadgeCount />}
+                    </span>
+                    <span className="text-slate-300">{isOpen ? "▾" : "▸"}</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-center py-1 mb-0.5 border-b border-slate-100" title={section.label || ""}>
+                    <span className="text-base">{(section as {icon?: string}).icon || "·"}</span>
+                  </div>
+                )
+              )}
+
+              {(isOpen || !isExpanded) && (
+                <div className="space-y-0.5">
+                  {section.items.map(item => (
+                    <div key={item.href}>
+                      {(item as {inboxBadge?: boolean}).inboxBadge ? (
+                        isExpanded ? <InboxBadge /> : (
+                          <Link href="/dashboard/inbox" title="Messages"
+                            className={`flex items-center justify-center w-8 h-8 rounded-xl transition-colors mx-auto ${isActive("/dashboard/inbox") ? "bg-[#0d1b2e] text-white" : "text-slate-600 hover:bg-slate-100"}`}>
+                            <span>💬</span>
+                          </Link>
+                        )
+                      ) : isExpanded ? (
+                        <Link href={item.href} onClick={() => setMobileOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                            isActive(item.href, (item as {exact?: boolean}).exact)
+                              ? "bg-[#0d1b2e] text-white"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          }`}>
+                          <span>{item.icon}</span>
+                          {item.label}
+                        </Link>
+                      ) : (
+                        <Link href={item.href} title={item.label}
+                          className={`flex items-center justify-center w-8 h-8 rounded-xl transition-colors mx-auto ${
+                            isActive(item.href, (item as {exact?: boolean}).exact)
+                              ? "bg-[#0d1b2e] text-white"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          }`}>
+                          <span className="text-base">{item.icon}</span>
+                        </Link>
+                      )}
+                      {item.href === "/dashboard/scheduling" && <ROIBadge isExpanded={isExpanded} />}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-100 space-y-2">
-        <button
-          onClick={() => {
-            const url = "https://kinshipehr.com";
-            const text = "Check out Kinship EHR — a modern EHR built for behavioral health and DD agencies. Simple pricing, no per-seat fees.";
-            if (navigator.share) {
-              navigator.share({ title: "Kinship EHR", text, url });
-            } else {
-              navigator.clipboard.writeText(`${text}\n${url}`);
-              alert("Link copied to clipboard!");
-            }
-          }}
-          className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-teal-600 border border-teal-200 rounded-xl py-2 hover:bg-teal-50 transition-colors"
-        >
-          🔗 Share Kinship EHR
-        </button>
-        <div className="text-xs text-slate-400 text-center">Kinship EHR v0.1</div>
-      </div>
+      {isExpanded && <div className="px-4 py-3 border-t border-slate-200 space-y-1">
+        <Link href="/dashboard/release-notes" className="block text-center text-xs text-slate-400 hover:text-teal-600 transition-colors">
+          📋 Release Notes · v0.1
+        </Link>
+        <p className="text-xs text-slate-400 text-center">Kinship EHR · 2026</p>
+      </div>}
     </div>
+    </>
   );
 }

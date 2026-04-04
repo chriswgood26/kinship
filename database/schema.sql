@@ -809,3 +809,74 @@ create policy "org_sfs_retroactive_adj_select" on sfs_retroactive_adjustments
   for select using (organization_id = auth_org_id());
 create policy "org_sfs_retroactive_adj_insert" on sfs_retroactive_adjustments
   for insert with check (organization_id = auth_org_id());
+
+-- ─── Patient Communications Automation Engine ─────────────────────────────────
+
+-- Message templates (org-configurable with variable interpolation)
+create table if not exists comm_templates (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  name text not null,
+  channel text not null check (channel in ('email', 'sms', 'both')),
+  subject text, -- email subject (may use {{vars}})
+  body text not null, -- email HTML or SMS text (may use {{vars}})
+  sms_body text, -- separate SMS body when channel = 'both'
+  variables jsonb default '[]', -- declared vars e.g. ["client_first_name","appointment_date"]
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Automation rules (event → template → channel → recipient)
+create table if not exists comm_rules (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  name text not null,
+  event_trigger text not null, -- appointment_scheduled | appointment_reminder_24h | appointment_reminder_1h | appointment_cancelled | appointment_no_show | intake_completed | discharge_completed | treatment_plan_due | birthday
+  template_id uuid references comm_templates(id) on delete set null,
+  channel text not null check (channel in ('email', 'sms', 'both')),
+  offset_minutes int default 0, -- negative = before event, positive = after
+  is_active boolean default true,
+  created_by_clerk_id text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Per-client opt-outs per channel
+create table if not exists comm_opt_outs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  channel text not null check (channel in ('email', 'sms', 'all')),
+  reason text,
+  opted_out_at timestamptz default now(),
+  opted_back_in_at timestamptz,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  unique (organization_id, client_id, channel)
+);
+
+-- Delivery log (every automated send)
+create table if not exists comm_delivery_log (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  rule_id uuid references comm_rules(id) on delete set null,
+  template_id uuid references comm_templates(id) on delete set null,
+  client_id uuid references clients(id) on delete cascade,
+  event_trigger text not null,
+  channel text not null,
+  recipient text not null, -- email address or phone number
+  subject text,
+  body text,
+  delivery_status text default 'pending' check (delivery_status in ('pending','sent','failed','opted_out','bounced')),
+  delivery_error text,
+  external_id text, -- Resend message ID or Twilio SID
+  sent_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+-- RLS: scope all comm tables to organization
+alter table comm_templates enable row level security;
+alter table comm_rules enable row level security;
+alter table comm_opt_outs enable row level security;
+alter table comm_delivery_log enable row level security;

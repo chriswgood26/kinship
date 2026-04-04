@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendAppointmentReminder } from "@/lib/appointmentReminders";
 import { getOrgId } from "@/lib/getOrgId";
+import { triggerCommEvent } from "@/lib/commEngine";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
       appointment_type: body.appointment_type || null,
       status: body.status || "scheduled",
       notes: body.notes || null,
+      is_telehealth: body.is_telehealth || false,
+      telehealth_platform: body.telehealth_platform || null,
+      meeting_url: body.meeting_url || null,
     })
     .select()
     .single();
@@ -43,7 +47,21 @@ export async function POST(req: NextRequest) {
             .single(),
         ]);
         if (clientRes.data && orgRes.data) {
-          await sendAppointmentReminder(data, clientRes.data, orgRes.data, "confirmation");
+          // Try comm engine rules first; fall back to legacy reminder if no rules configured
+          const engineResult = await triggerCommEvent({
+            orgId,
+            eventTrigger: "appointment_scheduled",
+            clientId: data.client_id,
+            templateVars: {
+              appointment_date: data.appointment_date,
+              appointment_time: data.start_time || "",
+              appointment_type: data.appointment_type || "",
+            },
+          });
+          if (engineResult.sent === 0) {
+            // No rules fired — use legacy appointment reminder
+            await sendAppointmentReminder(data, clientRes.data, orgRes.data, "confirmation");
+          }
         }
       } catch (e) {
         console.error("Failed to send appointment confirmation:", e);
