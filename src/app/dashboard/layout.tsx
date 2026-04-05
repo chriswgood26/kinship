@@ -13,12 +13,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = await currentUser();
   if (!user) redirect("/sign-in");
 
-  // Enforce MFA for all staff — skip check only on the MFA setup page itself
-  const headersList = await headers();
-  const pathname = headersList.get("x-pathname") || "";
-  if (!user.twoFactorEnabled && pathname !== "/dashboard/mfa-setup") {
-    redirect("/dashboard/mfa-setup");
-  }
+  // MFA enforcement — disabled until Clerk plan supports MFA
+  // TODO: Re-enable when Clerk is upgraded to a plan with MFA support
+  // const headersList = await headers();
+  // const pathname = headersList.get("x-pathname") || "";
+  // if (!user.twoFactorEnabled && pathname !== "/dashboard/mfa-setup") {
+  //   redirect("/dashboard/mfa-setup");
+  // }
 
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
