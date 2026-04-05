@@ -1133,3 +1133,83 @@ create policy "org_peer_support_delete" on peer_support_sessions
 --   - witnessed_by, notes
 --
 -- No additional migration needed — uses existing consent_forms table.
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Community Support Services
+-- ─────────────────────────────────────────────────────────────────────────────
+create table if not exists community_support_activities (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  client_id uuid not null references patients(id) on delete cascade,
+
+  -- Activity info
+  activity_date date not null,
+  start_time time,
+  end_time time,
+  duration_minutes integer,
+  activity_type text not null default 'case_management' check (activity_type in (
+    'case_management', 'community_integration', 'natural_supports',
+    'transportation', 'housing_support', 'employment_support',
+    'benefits_assistance', 'food_access', 'social_skills',
+    'independent_living', 'family_support', 'crisis_intervention', 'other'
+  )),
+  location text,                        -- office, community, home, phone, etc.
+  setting text,                         -- where the activity took place
+
+  -- Staff
+  staff_name text not null,
+  staff_clerk_id text,
+  staff_credentials text,
+
+  -- Documentation
+  activity_summary text not null,
+  goals_addressed text[],               -- array of goal areas addressed
+  client_response text,                 -- how the client responded/engaged
+  progress_notes text,                  -- progress toward goals
+  barriers_identified text,
+  action_steps text,                    -- next steps / follow-up actions
+  resources_connected text,             -- community resources or services connected
+  collateral_contacts text,             -- contacts made with family, providers, etc.
+
+  -- Engagement
+  engagement_level text check (engagement_level in ('fully_engaged', 'partially_engaged', 'minimal_engagement', 'refused')),
+  attendance text check (attendance in ('attended', 'no_show', 'cancelled', 'rescheduled')),
+
+  -- Safety
+  safety_concern boolean not null default false,
+  safety_notes text,
+
+  -- Follow-up
+  follow_up_date date,
+  follow_up_notes text,
+
+  -- Billing
+  billing_code text,
+  billing_modifier text,
+  units integer default 1,
+  is_billable boolean not null default true,
+
+  -- Meta
+  notes text,
+  created_by_clerk_id text,
+  supervisor_reviewed boolean not null default false,
+  supervisor_name text,
+  supervisor_reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_community_support_org on community_support_activities(organization_id, activity_date desc);
+create index if not exists idx_community_support_client on community_support_activities(client_id);
+create index if not exists idx_community_support_staff on community_support_activities(staff_clerk_id);
+
+alter table community_support_activities enable row level security;
+
+create policy "org_community_support_select" on community_support_activities
+  for select using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_community_support_insert" on community_support_activities
+  for insert with check (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_community_support_update" on community_support_activities
+  for update using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_community_support_delete" on community_support_activities
+  for delete using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
