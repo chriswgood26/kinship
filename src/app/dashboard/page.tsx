@@ -43,7 +43,7 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Active Clients", value: totalClients ?? 0, icon: "👤", href: "/dashboard/clients", color: "bg-teal-50 border-teal-100" },
+          { label: "My Caseload", value: totalClients ?? 0, icon: "👤", href: "/dashboard/clients", color: "bg-teal-50 border-teal-100" },
           { label: "Today's Appointments", value: todayAppts ?? 0, icon: "📅", href: "/dashboard/scheduling", color: "bg-blue-50 border-blue-100" },
           { label: "Pending Notes", value: pendingNotes ?? 0, icon: "📝", href: "/dashboard/encounters", color: "bg-amber-50 border-amber-100" },
         ].map(stat => (
