@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabaseAdmin, ensureBucket } from "@/lib/supabaseAdmin";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
@@ -81,6 +81,8 @@ export async function POST(req: NextRequest) {
 
   const ext = file.name.split(".").pop();
   const storagePath = `${profile?.organization_id || "default"}/${patientId || referralId || userProfileId || "misc"}/${Date.now()}-${file.name}`;
+
+  await ensureBucket("documents");
 
   const arrayBuffer = await file.arrayBuffer();
   const { error: uploadError } = await supabaseAdmin.storage

@@ -9,3 +9,14 @@ export const supabaseAdmin = createClient(
   SUPABASE_SERVICE_ROLE_KEY(),
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
+
+const ensuredBuckets = new Set<string>();
+
+export async function ensureBucket(name: string) {
+  if (ensuredBuckets.has(name)) return;
+  const { data } = await supabaseAdmin.storage.getBucket(name);
+  if (!data) {
+    await supabaseAdmin.storage.createBucket(name, { public: false });
+  }
+  ensuredBuckets.add(name);
+}

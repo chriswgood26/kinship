@@ -327,10 +327,12 @@ export default function DocumentUploader({ patientId, referralId, userProfileId,
                   </button>
                 )}
                 <button onClick={() => handleDownload(doc)}
+                  title="Download"
                   className="text-xs text-teal-600 hover:text-teal-700 font-medium border border-teal-200 px-2.5 py-1 rounded-lg hover:bg-teal-50">
                   ↓
                 </button>
                 <button onClick={() => handleDelete(doc)}
+                  title="Delete"
                   className="text-xs text-red-400 hover:text-red-600 font-medium border border-red-100 px-2.5 py-1 rounded-lg hover:bg-red-50">
                   ✕
                 </button>
