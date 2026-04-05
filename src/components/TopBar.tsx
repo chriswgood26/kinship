@@ -14,7 +14,7 @@ interface Notification {
 }
 
 interface Props {
-  user: { firstName: string | null; lastName: string | null; email: string | undefined; role?: string | null; title?: string | null };
+  user: { firstName: string | null; lastName: string | null; email: string | undefined; roles?: string[]; title?: string | null };
 }
 
 export default function TopBar({ user }: Props) {
@@ -155,8 +155,8 @@ export default function TopBar({ user }: Props) {
           </div>
           <div className="hidden md:block">
             <div className="text-sm font-medium text-slate-900">{fullName}</div>
-            {(user.title || user.role) && (
-              <div className="text-xs text-slate-400 capitalize">{user.title || user.role?.replace("_", " ")}</div>
+            {(user.title || user.roles?.length) && (
+              <div className="text-xs text-slate-400 capitalize">{user.title || user.roles?.map(r => r.replace("_", " ")).join(", ")}</div>
             )}
           </div>
         </div>
