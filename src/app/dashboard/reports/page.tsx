@@ -1,19 +1,22 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getOrgId } from "@/lib/getOrgId";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  const user = await currentUser();
-  if (!user) redirect("/sign-in");
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
 
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", user.id).single();
-  const orgId = profile?.organization_id || "";
+  const orgId = await getOrgId(userId);
 
   const today = new Date().toISOString().split("T")[0];
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
 
   const [
     { count: activeClients },
@@ -22,6 +25,7 @@ export default async function ReportsPage() {
     { count: unsignedNotes },
     { count: pendingCharges },
     { data: recentEncounters },
+    { data: monthCharges },
   ] = await Promise.all([
     supabaseAdmin.from("clients").select("*", { count: "exact", head: true }).eq("organization_id", orgId).eq("is_active", true),
     supabaseAdmin.from("encounters").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
@@ -29,7 +33,14 @@ export default async function ReportsPage() {
     supabaseAdmin.from("clinical_notes").select("*, encounter:encounter_id!inner(organization_id)", { count: "exact", head: true }).eq("encounter.organization_id", orgId).eq("is_signed", false),
     supabaseAdmin.from("charges").select("*", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "pending"),
     supabaseAdmin.from("encounters").select("*, client:client_id(first_name, last_name)").eq("organization_id", orgId).order("encounter_date", { ascending: false }).limit(8),
+    supabaseAdmin.from("charges").select("charge_amount, paid_amount, status").eq("organization_id", orgId).gte("service_date", firstOfMonth).lte("service_date", today),
   ]);
+
+  const monthRevenue = monthCharges?.reduce((s, c) => s + (Number(c.charge_amount) || 0), 0) ?? 0;
+  const monthCollected = monthCharges
+    ?.filter(c => c.status === "paid")
+    .reduce((s, c) => s + (Number(c.paid_amount) || Number(c.charge_amount) || 0), 0) ?? 0;
+  const monthCollectionRate = monthRevenue > 0 ? Math.round((monthCollected / monthRevenue) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -37,6 +48,32 @@ export default async function ReportsPage() {
         <h1 className="text-2xl font-bold text-slate-900">Reports & Analytics</h1>
         <p className="text-slate-500 text-sm mt-0.5">Practice overview and key metrics</p>
       </div>
+
+      {/* Financial Dashboard feature card */}
+      <Link
+        href="/dashboard/reports/revenue"
+        className="block bg-gradient-to-br from-[#0d1b2e] to-[#1a3260] rounded-2xl p-6 no-underline hover:opacity-95 transition-opacity"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-semibold text-teal-300 uppercase tracking-wider mb-1">Financial Dashboard</div>
+            <h2 className="text-xl font-bold text-white">Revenue Analytics</h2>
+            <p className="text-slate-300 text-sm mt-1">Monthly trend, AR aging, CPT performance, collection rates</p>
+          </div>
+          <div className="text-right">
+            <div className="text-3xl font-bold text-teal-300">
+              ${monthRevenue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            </div>
+            <div className="text-xs text-slate-300 mt-0.5">charged this month</div>
+            {monthRevenue > 0 && (
+              <div className={`text-sm font-semibold mt-1 ${monthCollectionRate >= 80 ? "text-teal-300" : "text-amber-300"}`}>
+                {monthCollectionRate}% collected
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="mt-4 text-xs text-teal-400 font-medium">Open Financial Dashboard →</div>
+      </Link>
 
       {/* Key metrics */}
       <div className="grid grid-cols-5 gap-4">
@@ -57,8 +94,11 @@ export default async function ReportsPage() {
 
       {/* Recent encounters */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">Recent Encounters</h2>
+          <Link href="/dashboard/reports/encounters" className="text-xs text-teal-600 hover:text-teal-800 font-medium">
+            Full Report →
+          </Link>
         </div>
         {!recentEncounters?.length ? (
           <div className="p-8 text-center text-slate-400 text-sm">No encounters yet</div>
@@ -84,20 +124,32 @@ export default async function ReportsPage() {
       </div>
 
       {/* Quick report links */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Unsigned Notes", desc: "Notes pending signature", href: "/dashboard/encounters?status=in_progress", icon: "📝", alert: (unsignedNotes ?? 0) > 0 },
-          { label: "Pending Billing", desc: "Charges awaiting submission", href: "/dashboard/billing?status=pending", icon: "💰", alert: (pendingCharges ?? 0) > 0 },
-          { label: "Active Clients", desc: "Current caseload", href: "/dashboard/clients", icon: "👤", alert: false },
-        ].map(r => (
-          <Link key={r.label} href={r.href}
-            className={`bg-white rounded-2xl border p-5 hover:shadow-sm transition-shadow no-underline ${r.alert ? "border-amber-200" : "border-slate-200"}`}>
-            <div className="text-2xl mb-2">{r.icon}</div>
-            <div className="font-semibold text-slate-900 text-sm">{r.label}</div>
-            <div className="text-xs text-slate-400 mt-0.5">{r.desc}</div>
-            <div className="text-xs text-teal-600 font-medium mt-2">View →</div>
-          </Link>
-        ))}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">All Reports</h3>
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { label: "Financial Dashboard", desc: "Revenue, AR aging, CPT analytics", href: "/dashboard/reports/revenue", icon: "📈", highlight: true },
+            { label: "Charge Summary", desc: "Full charge register by date", href: "/dashboard/reports/charges", icon: "🧾", highlight: false },
+            { label: "Claims Outcome", desc: "Paid vs denied analysis", href: "/dashboard/reports/claims", icon: "📋", highlight: false },
+            { label: "Revenue by CPT", desc: "Procedure code breakdown", href: "/dashboard/reports/cpt", icon: "💳", highlight: false },
+            { label: "Unsigned Notes", desc: "Notes pending signature", href: "/dashboard/encounters?status=in_progress", icon: "📝", alert: (unsignedNotes ?? 0) > 0 },
+            { label: "Pending Billing", desc: "Charges awaiting submission", href: "/dashboard/billing?status=pending", icon: "💰", alert: (pendingCharges ?? 0) > 0 },
+            { label: "Encounters", desc: "Encounter volume by date", href: "/dashboard/reports/encounters", icon: "⚕️", highlight: false },
+            { label: "Caseload", desc: "Client assignments", href: "/dashboard/reports/caseload", icon: "👤", highlight: false },
+          ].map(r => (
+            <Link key={r.label} href={r.href}
+              className={`bg-white rounded-2xl border p-4 hover:shadow-sm transition-shadow no-underline ${
+                "alert" in r && r.alert ? "border-amber-200" :
+                "highlight" in r && r.highlight ? "border-teal-200 bg-teal-50/30" :
+                "border-slate-200"
+              }`}>
+              <div className="text-xl mb-2">{r.icon}</div>
+              <div className="font-semibold text-slate-900 text-sm">{r.label}</div>
+              <div className="text-xs text-slate-400 mt-0.5">{r.desc}</div>
+              <div className={`text-xs font-medium mt-2 ${"highlight" in r && r.highlight ? "text-teal-600" : "text-slate-400"}`}>View →</div>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
