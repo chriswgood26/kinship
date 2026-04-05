@@ -123,11 +123,30 @@ export default async function ReportsPage() {
         )}
       </div>
 
+      {/* Custom Report Builder feature card */}
+      <Link
+        href="/dashboard/reports/custom"
+        className="block bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 no-underline hover:opacity-95 transition-opacity"
+      >
+        <div className="flex items-center gap-4">
+          <div className="text-3xl">🔍</div>
+          <div className="flex-1">
+            <div className="text-xs font-semibold text-violet-300 uppercase tracking-wider mb-0.5">Power Feature</div>
+            <h2 className="text-base font-bold text-white">Custom Report Builder</h2>
+            <p className="text-slate-400 text-xs mt-0.5">
+              Ask anything in plain English — &ldquo;encounters this month&rdquo;, &ldquo;revenue by CPT code&rdquo;, &ldquo;active clients&rdquo;
+            </p>
+          </div>
+          <div className="text-violet-300 font-medium text-sm">Open →</div>
+        </div>
+      </Link>
+
       {/* Quick report links */}
       <div>
         <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">All Reports</h3>
         <div className="grid grid-cols-4 gap-3">
           {[
+            { label: "Custom Report Builder", desc: "Ask anything in plain English", href: "/dashboard/reports/custom", icon: "🔍", highlight: true },
             { label: "Financial Dashboard", desc: "Revenue, AR aging, CPT analytics", href: "/dashboard/reports/revenue", icon: "📈", highlight: true },
             { label: "Charge Summary", desc: "Full charge register by date", href: "/dashboard/reports/charges", icon: "🧾", highlight: false },
             { label: "Claims Outcome", desc: "Paid vs denied analysis", href: "/dashboard/reports/claims", icon: "📋", highlight: false },
