@@ -58,12 +58,13 @@ export default async function DashboardPage() {
       {/* Quick actions */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
         <h2 className="font-semibold text-slate-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-5 gap-3">
           {[
             { label: "New Client", icon: "➕", href: "/dashboard/clients/new" },
             { label: "Schedule Appt", icon: "📅", href: "/dashboard/scheduling/new" },
             { label: "Start Encounter", icon: "⚕️", href: "/dashboard/encounters/new" },
             { label: "Add Charge", icon: "💰", href: "/dashboard/billing/new" },
+            { label: "Create Referral", icon: "🔗", href: "/dashboard/referrals/new" },
           ].map(action => (
             <Link key={action.label} href={action.href}
               className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-xl hover:bg-teal-50 hover:text-teal-700 transition-colors text-slate-700">
