@@ -25,7 +25,7 @@ export default async function AdminUsersPage() {
         first_name: user.firstName || "",
         last_name: user.lastName || "",
         email: user.emailAddresses?.[0]?.emailAddress || "",
-        role: "clinician",
+        roles: ["clinician"],
       }, { onConflict: "clerk_user_id" })
       .select()
       .single();
@@ -47,5 +47,5 @@ export default async function AdminUsersPage() {
     users = profile ? [profile] : [];
   }
 
-  return <UsersClient users={users} currentUserId={user.id} isAdmin={profile?.role === "admin"} />;
+  return <UsersClient users={users} currentUserId={user.id} isAdmin={(profile?.roles || [profile?.role]).includes("admin")} />;
 }
