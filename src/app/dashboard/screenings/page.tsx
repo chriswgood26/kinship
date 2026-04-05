@@ -6,6 +6,7 @@ import { PHQ9, GAD7, getSeverity } from "@/lib/screenings";
 import { CSSRS } from "@/lib/cssrs";
 import { AUDIT, DAST10 } from "@/lib/substanceScreenings";
 import { ACE, getACESeverity } from "@/lib/aceScreening";
+import { SDOH, getSDOHSeverity } from "@/lib/sdoh";
 import OrgScreeningTrends from "@/components/OrgScreeningTrends";
 
 export const dynamic = "force-dynamic";
@@ -33,13 +34,15 @@ export default async function ScreeningsPage() {
   const aceCount = screenings?.filter(s => s.tool === "ace").length || 0;
   const siAlerts = screenings?.filter(s => s.tool === "phq9" && (s.answers?.q9 || 0) > 0).length || 0;
   const aceHighRisk = screenings?.filter(s => s.tool === "ace" && (s.total_score || 0) >= 4).length || 0;
+  const sdohCount = screenings?.filter(s => s.tool === "sdoh").length || 0;
+  const sdohHighNeed = screenings?.filter(s => s.tool === "sdoh" && (s.total_score || 0) >= 6).length || 0;
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Screenings</h1>
-          <p className="text-slate-500 text-sm mt-0.5">PHQ-9, GAD-7, AUDIT, DAST-10, and C-SSRS standardized screening tools</p>
+          <p className="text-slate-500 text-sm mt-0.5">PHQ-9, GAD-7, AUDIT, DAST-10, ACE, SDOH, and C-SSRS standardized screening tools</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/screenings/phq9/new"
@@ -61,6 +64,10 @@ export default async function ScreeningsPage() {
           <Link href="/dashboard/screenings/ace/new"
             className="border border-rose-200 text-rose-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-rose-50 text-sm">
             + ACE
+          </Link>
+          <Link href="/dashboard/screenings/sdoh/new"
+            className="border border-teal-200 text-teal-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-50 text-sm">
+            + SDOH
           </Link>
           <Link href="/dashboard/screenings/cssrs/new"
             className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 text-sm">
@@ -95,6 +102,16 @@ export default async function ScreeningsPage() {
           <div>
             <div className="font-semibold text-rose-800">Elevated ACE scores detected</div>
             <div className="text-sm text-rose-600">{aceHighRisk} ACE screening{aceHighRisk > 1 ? "s have" : " has"} a score ≥ 4 — trauma-specialized assessment and referral recommended</div>
+          </div>
+        </div>
+      )}
+
+      {sdohHighNeed > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+          <span className="text-2xl">⚑</span>
+          <div>
+            <div className="font-semibold text-amber-800">High social need burden identified</div>
+            <div className="text-sm text-amber-600">{sdohHighNeed} SDOH screening{sdohHighNeed > 1 ? "s have" : " has"} 6+ unmet needs — social work consultation and community navigation recommended</div>
           </div>
         </div>
       )}
@@ -219,6 +236,29 @@ export default async function ScreeningsPage() {
           </Link>
         </div>
 
+        {/* SDOH */}
+        <div className="bg-teal-50 border border-teal-100 rounded-2xl p-5 col-span-2">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{SDOH.name}</div>
+              <div className="text-sm text-slate-500">{SDOH.fullName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{sdohCount}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">{SDOH.questions.length} questions · {SDOH.domains.length} domains · Housing, Food, Transportation + more</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {SDOH.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/sdoh/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 transition-colors">
+            Administer SDOH →
+          </Link>
+        </div>
+
         {/* C-SSRS */}
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 col-span-2">
           <div className="flex items-start justify-between mb-3">
@@ -275,11 +315,13 @@ export default async function ScreeningsPage() {
                 const isAUDIT = s.tool === "audit";
                 const isDAST = s.tool === "dast10";
                 const isACE = s.tool === "ace";
+                const isSDOH = s.tool === "sdoh";
                 const isSubstance = isAUDIT || isDAST;
-                const isStandard = !isCSSRS && !isSubstance && !isACE;
+                const isStandard = !isCSSRS && !isSubstance && !isACE && !isSDOH;
                 const tool = s.tool === "phq9" ? PHQ9 : GAD7;
                 const severity = isStandard ? getSeverity(s.total_score || 0, tool) : null;
                 const aceSeverity = isACE ? getACESeverity(s.total_score || 0) : null;
+                const sdohSeverity = isSDOH ? getSDOHSeverity(s.total_score || 0) : null;
                 const hasSI = s.tool === "phq9" && (s.answers?.q9 || 0) > 0;
                 const toolBadgeClass: Record<string, string> = {
                   phq9: "bg-blue-100 text-blue-700",
@@ -288,9 +330,10 @@ export default async function ScreeningsPage() {
                   audit: "bg-amber-100 text-amber-700",
                   dast10: "bg-violet-100 text-violet-700",
                   ace: "bg-rose-100 text-rose-700",
+                  sdoh: "bg-teal-100 text-teal-700",
                 };
                 const toolMaxScore: Record<string, number> = {
-                  phq9: PHQ9.maxScore, gad7: GAD7.maxScore, audit: AUDIT.maxScore, dast10: DAST10.maxScore, ace: ACE.maxScore,
+                  phq9: PHQ9.maxScore, gad7: GAD7.maxScore, audit: AUDIT.maxScore, dast10: DAST10.maxScore, ace: ACE.maxScore, sdoh: SDOH.maxScore,
                 };
                 return (
                   <tr key={s.id} className="hover:bg-slate-50">
@@ -300,7 +343,7 @@ export default async function ScreeningsPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded ${toolBadgeClass[s.tool] || "bg-slate-100 text-slate-600"}`}>
-                        {s.tool === "dast10" ? "DAST-10" : s.tool?.toUpperCase()}
+                        {s.tool === "dast10" ? "DAST-10" : s.tool === "sdoh" ? "SDOH" : s.tool?.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
@@ -322,6 +365,10 @@ export default async function ScreeningsPage() {
                       {isACE ? (
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${aceSeverity?.color}`}>
                           {aceSeverity?.label || "—"}
+                        </span>
+                      ) : isSDOH ? (
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${sdohSeverity?.color}`}>
+                          {sdohSeverity?.label || "—"}
                         </span>
                       ) : (isCSSRS || isSubstance) ? (
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600`}>
