@@ -15,6 +15,7 @@ interface TimeEntry {
   funding_source: string | null;
   notes: string | null;
   patient: { first_name: string; last_name: string; mrn: string | null } | null;
+  program: { name: string; code: string | null } | null;
   clinician_name: string | null;
   status: string;
 }
@@ -65,6 +66,161 @@ function formatHours(minutes: number) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+// ─── Pay-period helpers ───────────────────────────────────────────────────────
+function getPayPeriodDates(cfg: PayPeriodConfig, periodOffset = 0): { start: Date; end: Date } {
+  const today = new Date();
+
+  if (cfg.type === "weekly") {
+    const anchor = cfg.anchorDate ? new Date(cfg.anchorDate + "T00:00:00") : (() => {
+      const d = new Date(today); d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1)); return d;
+    })();
+    const daysDiff = Math.floor((today.getTime() - anchor.getTime()) / 86400000);
+    const periodIndex = Math.floor(daysDiff / 7);
+    const start = new Date(anchor.getTime() + (periodIndex + periodOffset) * 7 * 86400000);
+    const end = new Date(start.getTime() + 6 * 86400000);
+    return { start, end };
+  }
+
+  if (cfg.type === "biweekly") {
+    const anchor = cfg.anchorDate ? new Date(cfg.anchorDate + "T00:00:00") : (() => {
+      const d = new Date(today); d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1)); return d;
+    })();
+    const daysDiff = Math.floor((today.getTime() - anchor.getTime()) / 86400000);
+    const periodIndex = Math.floor(daysDiff / 14);
+    const start = new Date(anchor.getTime() + (periodIndex + periodOffset) * 14 * 86400000);
+    const end = new Date(start.getTime() + 13 * 86400000);
+    return { start, end };
+  }
+
+  if (cfg.type === "semimonthly") {
+    const split = cfg.startDay || 16;
+    let year = today.getFullYear(), month = today.getMonth();
+    let inFirst = today.getDate() < split;
+    month += periodOffset > 0
+      ? Math.floor(periodOffset / 2) + (inFirst && periodOffset % 2 === 1 ? 0 : periodOffset % 2 === 0 ? 0 : 0)
+      : 0;
+    // simplified: shift months for offset
+    const totalHalves = (year * 24 + month * 2 + (inFirst ? 0 : 1)) + periodOffset;
+    year = Math.floor(totalHalves / 24); month = Math.floor((totalHalves % 24) / 2);
+    const firstHalf = totalHalves % 2 === 0;
+    const start = new Date(year, month, firstHalf ? 1 : split);
+    const end = firstHalf
+      ? new Date(year, month, split - 1)
+      : new Date(year, month + 1, 0);
+    return { start, end };
+  }
+
+  // monthly
+  const d = new Date(today.getFullYear(), today.getMonth() + periodOffset, 1);
+  return { start: d, end: new Date(d.getFullYear(), d.getMonth() + 1, 0) };
+}
+
+function toDateStr(d: Date) { return d.toISOString().split("T")[0]; }
+
+function buildCSV(
+  exportEntries: TimeEntry[],
+  periodLabel: string,
+  clinicianLabel: string,
+): string {
+  const rows: string[][] = [];
+  const q = (s: string | number) => `"${String(s).replace(/"/g, '""')}"`;
+  const fmt = (mins: number) => (mins / 60).toFixed(2);
+
+  const actLabel = (v: string) => ACTIVITY_TYPES.find(a => a.value === v)?.label || v;
+
+  // Header block
+  rows.push([q("TIMESHEET EXPORT")]);
+  rows.push([q(`Period: ${periodLabel}`)]);
+  rows.push([q(`Staff: ${clinicianLabel}`)]);
+  rows.push([q(`Generated: ${new Date().toLocaleString()}`)]);
+  rows.push([]);
+
+  // — Summary by Activity —
+  rows.push([q("HOURS BY ACTIVITY TYPE")]);
+  rows.push([q("Activity"), q("Total Hours"), q("Billable Hours"), q("Non-Billable Hours"), q("Entries")]);
+  const byActivity = new Map<string, { total: number; billable: number; count: number }>();
+  for (const e of exportEntries) {
+    const key = e.activity_type;
+    const cur = byActivity.get(key) || { total: 0, billable: 0, count: 0 };
+    cur.total += e.duration_minutes || 0;
+    if (e.is_billable) cur.billable += e.duration_minutes || 0;
+    cur.count++;
+    byActivity.set(key, cur);
+  }
+  for (const [act, v] of Array.from(byActivity.entries()).sort((a, b) => b[1].total - a[1].total)) {
+    rows.push([q(actLabel(act)), q(fmt(v.total)), q(fmt(v.billable)), q(fmt(v.total - v.billable)), q(v.count)]);
+  }
+  const totalMins = exportEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+  const totalBill = exportEntries.filter(e => e.is_billable).reduce((s, e) => s + (e.duration_minutes || 0), 0);
+  rows.push([q("TOTAL"), q(fmt(totalMins)), q(fmt(totalBill)), q(fmt(totalMins - totalBill)), q(exportEntries.length)]);
+  rows.push([]);
+
+  // — Summary by Patient —
+  rows.push([q("HOURS BY PATIENT")]);
+  rows.push([q("Patient"), q("MRN"), q("Total Hours"), q("Billable Hours"), q("Entries")]);
+  const byPatient = new Map<string, { name: string; mrn: string; total: number; billable: number; count: number }>();
+  for (const e of exportEntries) {
+    const p = Array.isArray(e.patient) ? e.patient[0] : e.patient;
+    const key = p ? `${p.last_name}, ${p.first_name}` : "— No Patient —";
+    const cur = byPatient.get(key) || { name: key, mrn: p?.mrn || "—", total: 0, billable: 0, count: 0 };
+    cur.total += e.duration_minutes || 0;
+    if (e.is_billable) cur.billable += e.duration_minutes || 0;
+    cur.count++;
+    byPatient.set(key, cur);
+  }
+  for (const v of Array.from(byPatient.values()).sort((a, b) => b.total - a.total)) {
+    rows.push([q(v.name), q(v.mrn), q(fmt(v.total)), q(fmt(v.billable)), q(v.count)]);
+  }
+  rows.push([]);
+
+  // — Summary by Program —
+  rows.push([q("HOURS BY PROGRAM")]);
+  rows.push([q("Program"), q("Code"), q("Total Hours"), q("Billable Hours"), q("Entries")]);
+  const byProgram = new Map<string, { name: string; code: string; total: number; billable: number; count: number }>();
+  for (const e of exportEntries) {
+    const pg = Array.isArray(e.program) ? e.program[0] : e.program;
+    const key = pg?.name || "— No Program —";
+    const cur = byProgram.get(key) || { name: key, code: pg?.code || "—", total: 0, billable: 0, count: 0 };
+    cur.total += e.duration_minutes || 0;
+    if (e.is_billable) cur.billable += e.duration_minutes || 0;
+    cur.count++;
+    byProgram.set(key, cur);
+  }
+  for (const v of Array.from(byProgram.values()).sort((a, b) => b.total - a.total)) {
+    rows.push([q(v.name), q(v.code), q(fmt(v.total)), q(fmt(v.billable)), q(v.count)]);
+  }
+  rows.push([]);
+
+  // — Detail —
+  rows.push([q("DETAIL")]);
+  rows.push([
+    q("Date"), q("Clinician"), q("Patient"), q("MRN"), q("Program"),
+    q("Activity"), q("Description"), q("Start"), q("End"),
+    q("Hours"), q("Billable"), q("Funding Source"), q("Notes"),
+  ]);
+  for (const e of [...exportEntries].sort((a, b) => a.entry_date.localeCompare(b.entry_date))) {
+    const p = Array.isArray(e.patient) ? e.patient[0] : e.patient;
+    const pg = Array.isArray(e.program) ? e.program[0] : e.program;
+    rows.push([
+      q(e.entry_date),
+      q(e.clinician_name || "—"),
+      q(p ? `${p.last_name}, ${p.first_name}` : "—"),
+      q(p?.mrn || "—"),
+      q(pg?.name || "—"),
+      q(actLabel(e.activity_type)),
+      q(e.activity_description || ""),
+      q(e.start_time ? e.start_time.slice(0, 5) : "—"),
+      q(e.end_time ? e.end_time.slice(0, 5) : "—"),
+      q(fmt(e.duration_minutes || 0)),
+      q(e.is_billable ? "Yes" : "No"),
+      q(e.funding_source || "—"),
+      q(e.notes || ""),
+    ]);
+  }
+
+  return rows.map(r => r.join(",")).join("\n");
+}
+
 export default function TimesheetPage() {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [payConfig, setPayConfig] = useState<PayPeriodConfig>({ type: "biweekly" });
@@ -77,6 +233,12 @@ export default function TimesheetPage() {
   const [saving, setSaving] = useState(false);
   const [patientSearch, setPatientSearch] = useState("");
   const [patients, setPatients] = useState<{id:string;first_name:string;last_name:string;mrn:string|null}[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportPeriod, setExportPeriod] = useState<"current_period" | "prev_period" | "current_week" | "prev_week" | "custom">("current_period");
+  const [exportCustomFrom, setExportCustomFrom] = useState("");
+  const [exportCustomTo, setExportCustomTo] = useState("");
+  const [exportClinician, setExportClinician] = useState("me");
 
   const weekDays = getWeekDates(weekOffset);
   const weekStart = weekDays[0].toISOString().split("T")[0];
@@ -109,6 +271,61 @@ export default function TimesheetPage() {
     const filtered = (d.entries || []).filter((e: TimeEntry) => e.entry_date >= weekStart && e.entry_date <= weekEnd);
     setEntries(filtered);
     setLoading(false);
+  }
+
+  async function doExport() {
+    setExportLoading(true);
+    let dateFrom = "", dateTo = "";
+
+    if (exportPeriod === "current_week") {
+      const days = getWeekDates(0);
+      dateFrom = days[0].toISOString().split("T")[0];
+      dateTo = days[6].toISOString().split("T")[0];
+    } else if (exportPeriod === "prev_week") {
+      const days = getWeekDates(-1);
+      dateFrom = days[0].toISOString().split("T")[0];
+      dateTo = days[6].toISOString().split("T")[0];
+    } else if (exportPeriod === "current_period") {
+      const { start, end } = getPayPeriodDates(payConfig, 0);
+      dateFrom = toDateStr(start); dateTo = toDateStr(end);
+    } else if (exportPeriod === "prev_period") {
+      const { start, end } = getPayPeriodDates(payConfig, -1);
+      dateFrom = toDateStr(start); dateTo = toDateStr(end);
+    } else {
+      dateFrom = exportCustomFrom; dateTo = exportCustomTo;
+    }
+
+    if (!dateFrom || !dateTo) { setExportLoading(false); return; }
+
+    const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+    if (exportClinician === "all") params.set("all", "true");
+    else if (exportClinician !== "me") params.set("clinician_id", exportClinician);
+
+    const res = await fetch(`/api/time-entries?${params}`, { credentials: "include" });
+    const d = await res.json();
+    const exportEntries: TimeEntry[] = (d.entries || []).filter(
+      (e: TimeEntry) => e.entry_date >= dateFrom && e.entry_date <= dateTo
+    );
+
+    const clinicianLabel = exportClinician === "all"
+      ? "All Staff"
+      : exportClinician === "me"
+        ? "My entries"
+        : staff.find(s => s.clerk_user_id === exportClinician)?.first_name + " " +
+          staff.find(s => s.clerk_user_id === exportClinician)?.last_name || exportClinician;
+
+    const periodLabel = `${new Date(dateFrom + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${new Date(dateTo + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+
+    const csv = buildCSV(exportEntries, periodLabel, clinicianLabel);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `timesheet-${dateFrom}-to-${dateTo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportLoading(false);
+    setShowExportModal(false);
   }
 
   useEffect(() => {
@@ -159,28 +376,18 @@ export default function TimesheetPage() {
     load();
   }
 
-  function exportCSV() {
-    const rows = [
-      ["Date", "Clinician", "Patient", "Activity", "Start", "End", "Hours", "Billable", "Funding Source", "Notes"],
-      ...entries.map(e => {
-        const p = Array.isArray(e.patient) ? e.patient[0] : e.patient;
-        return [
-          e.entry_date, e.clinician_name || "—",
-          p ? `${p.last_name}, ${p.first_name}` : "—",
-          ACTIVITY_TYPES.find(a => a.value === e.activity_type)?.label || e.activity_type,
-          e.start_time || "—", e.end_time || "—",
-          (e.duration_minutes / 60).toFixed(2),
-          e.is_billable ? "Yes" : "No",
-          e.funding_source || "—", e.notes || "—",
-        ];
-      })
-    ];
-    const csv = rows.map(r => r.join(",")).join("\n");
+  function exportCurrentWeekCSV() {
+    const periodLabel = `${weekDays[0].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${weekDays[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    const clinicianLabel = viewMode === "all"
+      ? (selectedClinician ? staff.find(s => s.clerk_user_id === selectedClinician)?.first_name + " " + staff.find(s => s.clerk_user_id === selectedClinician)?.last_name || selectedClinician : "All Staff")
+      : "My entries";
+    const csv = buildCSV(entries, periodLabel, clinicianLabel);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url;
     a.download = `timesheet-${weekStart}-to-${weekEnd}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
   }
 
   // Totals
@@ -208,8 +415,11 @@ export default function TimesheetPage() {
         </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={exportCSV} className="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">
-            📥 Export CSV
+          <button onClick={exportCurrentWeekCSV} className="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">
+            📥 This Week
+          </button>
+          <button onClick={() => setShowExportModal(true)} className="border border-teal-200 text-teal-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-teal-50">
+            📊 Export Report
           </button>
           <button onClick={() => setShowForm(true)} className="bg-teal-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400">
             + Log Time
@@ -401,6 +611,79 @@ export default function TimesheetPage() {
           </div>
         )}
       </div>
+
+      {/* Export Report Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Export Timesheet Report</h2>
+                <p className="text-xs text-slate-500 mt-0.5">CSV with hours by activity, patient, and program</p>
+              </div>
+              <button onClick={() => setShowExportModal(false)} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+            </div>
+            <div className="p-6 space-y-5">
+              {/* Period selection */}
+              <div>
+                <label className={labelClass}>Pay Period</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "current_period", label: "Current Pay Period", desc: (() => { const { start, end } = getPayPeriodDates(payConfig, 0); return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`; })() },
+                    { value: "prev_period", label: "Previous Pay Period", desc: (() => { const { start, end } = getPayPeriodDates(payConfig, -1); return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`; })() },
+                    { value: "current_week", label: "Current Week", desc: (() => { const d = getWeekDates(0); return `${d[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${d[6].toLocaleDateString("en-US", { month: "short", day: "numeric" })}`; })() },
+                    { value: "prev_week", label: "Previous Week", desc: (() => { const d = getWeekDates(-1); return `${d[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${d[6].toLocaleDateString("en-US", { month: "short", day: "numeric" })}`; })() },
+                    { value: "custom", label: "Custom Range", desc: "Pick start & end date" },
+                  ].map(opt => (
+                    <button key={opt.value} type="button"
+                      onClick={() => setExportPeriod(opt.value as typeof exportPeriod)}
+                      className={`text-left px-4 py-3 rounded-xl border text-sm transition-colors ${exportPeriod === opt.value ? "border-teal-400 bg-teal-50 text-teal-800" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>
+                      <div className="font-semibold">{opt.label}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {exportPeriod === "custom" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>From</label>
+                    <input type="date" value={exportCustomFrom} onChange={e => setExportCustomFrom(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>To</label>
+                    <input type="date" value={exportCustomTo} onChange={e => setExportCustomTo(e.target.value)} className={inputClass} />
+                  </div>
+                </div>
+              )}
+
+              {/* Staff filter */}
+              <div>
+                <label className={labelClass}>Staff</label>
+                <select value={exportClinician} onChange={e => setExportClinician(e.target.value)} className={inputClass}>
+                  <option value="me">My entries only</option>
+                  <option value="all">All staff</option>
+                  {staff.map(s => (
+                    <option key={s.clerk_user_id} value={s.clerk_user_id}>{s.first_name} {s.last_name} ({s.role})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500">
+                <strong className="text-slate-700">Report includes:</strong> Summary by activity type · Summary by patient · Summary by program · Full detail rows
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end px-6 py-4 border-t border-slate-100">
+              <button onClick={() => setShowExportModal(false)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button onClick={doExport} disabled={exportLoading || (exportPeriod === "custom" && (!exportCustomFrom || !exportCustomTo))}
+                className="bg-teal-500 text-white px-6 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50 flex items-center gap-2">
+                {exportLoading ? "Generating..." : "📥 Download CSV"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

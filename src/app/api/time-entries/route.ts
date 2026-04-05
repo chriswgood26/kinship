@@ -11,13 +11,18 @@ export async function GET(req: NextRequest) {
   const clinicianId = req.nextUrl.searchParams.get("clinician_id");
   const allClinicians = req.nextUrl.searchParams.get("all") === "true";
 
+  const weekStart = req.nextUrl.searchParams.get("week_start");
+  const weekEnd = req.nextUrl.searchParams.get("week_end");
+  const dateFrom = req.nextUrl.searchParams.get("date_from");
+  const dateTo = req.nextUrl.searchParams.get("date_to");
+
   let query = supabaseAdmin
     .from("time_entries")
-    .select("*, client:client_id(first_name, last_name, mrn)")
+    .select("*, client:client_id(first_name, last_name, mrn), program:program_id(name, code)")
     .eq("organization_id", orgId)
     .order("entry_date", { ascending: false })
     .order("start_time", { ascending: false })
-    .limit(200);
+    .limit(500);
 
   if (clinicianId) {
     // Filter to specific clinician (works in both my and all-staff views)
@@ -28,17 +33,24 @@ export async function GET(req: NextRequest) {
   }
   // If allClinicians and no clinicianId: show everyone (no filter)
 
-  if (week) {
+  // Date range filtering (explicit date_from/date_to take priority)
+  if (dateFrom) query = query.gte("entry_date", dateFrom);
+  if (dateTo) query = query.lte("entry_date", dateTo);
+  else if (weekStart) query = query.gte("entry_date", weekStart);
+
+  if (week && !dateFrom && !dateTo) {
     // week = YYYY-WW, get start and end of that week
     const [year, weekNum] = week.split("-").map(Number);
     const jan1 = new Date(year, 0, 1);
-    const weekStart = new Date(jan1.getTime() + (weekNum - 1) * 7 * 86400000);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
-    const weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+    const wkStart = new Date(jan1.getTime() + (weekNum - 1) * 7 * 86400000);
+    wkStart.setDate(wkStart.getDate() - wkStart.getDay() + 1);
+    const wkEnd = new Date(wkStart.getTime() + 6 * 86400000);
     query = query
-      .gte("entry_date", weekStart.toISOString().split("T")[0])
-      .lte("entry_date", weekEnd.toISOString().split("T")[0]);
+      .gte("entry_date", wkStart.toISOString().split("T")[0])
+      .lte("entry_date", wkEnd.toISOString().split("T")[0]);
   }
+
+  void weekEnd; // acknowledged — client filters locally for the weekly view
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
