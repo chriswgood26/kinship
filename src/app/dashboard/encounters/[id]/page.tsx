@@ -5,6 +5,8 @@ import Link from "next/link";
 import SOAPEditor from "./SOAPEditor";
 import NoteAmendmentPanel from "./NoteAmendmentPanel";
 import TimeTracker from "./TimeTracker";
+import GroupParticipantsPanel from "./GroupParticipantsPanel";
+import GroupNoteEditor from "./GroupNoteEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +31,21 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
   ]);
 
   if (!encounter) notFound();
+
+  const isGroup = encounter.is_group === true;
   const client = Array.isArray(encounter.client) ? encounter.client[0] : encounter.client;
   const existingNote = notes?.[0] || null;
   const isSigned = existingNote?.is_signed || false;
+
+  // Fetch group participants if this is a group session
+  const groupParticipants = isGroup
+    ? ((await supabaseAdmin
+        .from("group_session_participants")
+        .select("*, client:client_id(id, first_name, last_name, mrn, preferred_name)")
+        .eq("encounter_id", id)
+        .order("created_at", { ascending: true })
+      ).data ?? [])
+    : [];
 
   // Fetch amendments for signed notes
   const amendments = isSigned && existingNote?.id
@@ -43,6 +57,11 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
       ).data ?? []
     : [];
 
+  // Title: group name or client name
+  const pageTitle = isGroup
+    ? (encounter.group_name || "Group Session")
+    : (client ? `${client.last_name}, ${client.first_name}` : "Encounter");
+
   return (
     <div className="max-w-4xl space-y-5">
       <div className="flex items-start justify-between">
@@ -50,25 +69,31 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
           <Link href="/dashboard/encounters" className="text-slate-400 hover:text-slate-700">←</Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">{client ? `${client.last_name}, ${client.first_name}` : "Encounter"}</h1>
+              <h1 className="text-xl font-bold text-slate-900">{pageTitle}</h1>
+              {isGroup && (
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-purple-100 text-purple-700">👥 Group</span>
+              )}
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isSigned ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                 {isSigned ? "✓ Signed" : "📝 In Progress"}
               </span>
             </div>
             <div className="text-sm text-slate-500 mt-0.5">
               {encounter.encounter_type} · {encounter.encounter_date}
-              {client?.mrn && ` · MRN: ${client.mrn}`}
+              {!isGroup && client?.mrn && ` · MRN: ${client.mrn}`}
+              {isGroup && ` · ${groupParticipants.length} participants`}
             </div>
           </div>
         </div>
-        <Link href={`/dashboard/clients/${encounter.client_id}`} className="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">
-          Client Chart →
-        </Link>
+        {!isGroup && client && (
+          <Link href={`/dashboard/clients/${encounter.client_id}`} className="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">
+            Client Chart →
+          </Link>
+        )}
       </div>
 
       {encounter.chief_complaint && (
         <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-sm">
-          <span className="font-semibold text-amber-700">Chief Complaint: </span>
+          <span className="font-semibold text-amber-700">{isGroup ? "Session Focus: " : "Chief Complaint: "}</span>
           <span className="text-amber-900">{encounter.chief_complaint}</span>
         </div>
       )}
@@ -81,6 +106,14 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
         initialDurationMinutes={encounter.duration_minutes ?? null}
         initialDurationOverride={encounter.duration_override ?? false}
       />
+
+      {/* Group Participants Panel */}
+      {isGroup && (
+        <GroupParticipantsPanel
+          encounterId={id}
+          initialParticipants={groupParticipants}
+        />
+      )}
 
       {/* Charges */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -136,12 +169,15 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
         )}
       </div>
 
+      {/* Note section — group or individual */}
       {isSigned && existingNote ? (
         <>
           <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden">
             <div className="px-5 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-emerald-900">✓ Signed Progress Note</h2>
+                <h2 className="font-semibold text-emerald-900">
+                  ✓ Signed {isGroup ? "Group Session" : "Progress"} Note
+                </h2>
                 {existingNote.is_late_note && (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">⏰ Late Note</span>
                 )}
@@ -152,11 +188,20 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
             </div>
             <div className="p-6 space-y-4">
               {[
-                { label: "S — Subjective", value: existingNote.subjective, color: "border-blue-100 bg-blue-50/30" },
-                { label: "O — Objective", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
-                { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
-                { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
-              ].map(s => s.value && (
+                isGroup
+                  ? [
+                      { label: "S — Session Content", value: existingNote.subjective, color: "border-purple-100 bg-purple-50/30" },
+                      { label: "O — Group Observations", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
+                      { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
+                      { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
+                    ]
+                  : [
+                      { label: "S — Subjective", value: existingNote.subjective, color: "border-blue-100 bg-blue-50/30" },
+                      { label: "O — Objective", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
+                      { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
+                      { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
+                    ],
+              ].flat().map(s => s.value && (
                 <div key={s.label} className={`border rounded-xl p-4 ${s.color}`}>
                   <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{s.label}</div>
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.value}</p>
@@ -178,12 +223,15 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
             </div>
           </div>
 
-          {/* Amendments & Addenda panel — always shown for signed notes */}
-          <NoteAmendmentPanel
-            noteId={existingNote.id}
-            initialAmendments={amendments}
-          />
+          <NoteAmendmentPanel noteId={existingNote.id} initialAmendments={amendments} />
         </>
+      ) : isGroup ? (
+        <GroupNoteEditor
+          encounterId={id}
+          existingNote={existingNote}
+          groupName={encounter.group_name ?? null}
+          encounterDate={encounter.encounter_date}
+        />
       ) : (
         <SOAPEditor
           encounterId={id}

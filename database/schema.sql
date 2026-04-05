@@ -191,6 +191,36 @@ create table if not exists clinical_notes (
 -- alter table clinical_notes add column if not exists is_late_note boolean default false;
 -- alter table clinical_notes add column if not exists late_note_reason text;
 
+-- Migration: add group session fields to encounters
+alter table encounters add column if not exists is_group boolean default false;
+alter table encounters add column if not exists group_name text;
+
+-- Group session participants — one row per client per group encounter
+create table if not exists group_session_participants (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  encounter_id uuid references encounters(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  attendance_status text default 'present' check (attendance_status in ('present', 'absent', 'late', 'excused')),
+  participation_notes text,
+  created_at timestamptz default now(),
+  unique (encounter_id, client_id)
+);
+
+create index if not exists idx_group_session_participants_encounter on group_session_participants(encounter_id);
+create index if not exists idx_group_session_participants_org on group_session_participants(organization_id);
+create index if not exists idx_group_session_participants_client on group_session_participants(client_id);
+
+alter table group_session_participants enable row level security;
+create policy "org_group_session_participants_select" on group_session_participants
+  for select using (organization_id = auth_org_id());
+create policy "org_group_session_participants_insert" on group_session_participants
+  for insert with check (organization_id = auth_org_id());
+create policy "org_group_session_participants_update" on group_session_participants
+  for update using (organization_id = auth_org_id());
+create policy "org_group_session_participants_delete" on group_session_participants
+  for delete using (organization_id = auth_org_id());
+
 -- Note amendments / addenda (corrections to locked/signed notes)
 -- The original note is never modified; amendments append to the audit trail.
 create table if not exists note_amendments (
