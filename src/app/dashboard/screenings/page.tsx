@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { PHQ9, GAD7, getSeverity } from "@/lib/screenings";
 import { CSSRS } from "@/lib/cssrs";
 import { AUDIT, DAST10 } from "@/lib/substanceScreenings";
+import OrgScreeningTrends from "@/components/OrgScreeningTrends";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,9 @@ export default async function ScreeningsPage() {
           </div>
         </div>
       )}
+
+      {/* Population Trends */}
+      <OrgScreeningTrends />
 
       {/* Tool cards */}
       <div className="grid grid-cols-2 gap-4">

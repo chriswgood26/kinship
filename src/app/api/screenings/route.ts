@@ -7,9 +7,12 @@ import { getUserProfile } from "@/lib/getOrgId";
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const client_id = new URL(req.url).searchParams.get("client_id");
+  const url = new URL(req.url);
+  const client_id = url.searchParams.get("client_id");
+  const limitParam = url.searchParams.get("limit");
+  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 50, 200) : (client_id ? 50 : 100);
   const { profile, orgId } = await getUserProfile(userId);
-  let query = supabaseAdmin.from("screenings").select("*").eq("organization_id", orgId).order("administered_at", { ascending: false }).limit(20);
+  let query = supabaseAdmin.from("screenings").select("*").eq("organization_id", orgId).order("administered_at", { ascending: false }).limit(limit);
   if (client_id) query = query.eq("client_id", client_id);
   const { data } = await query;
 

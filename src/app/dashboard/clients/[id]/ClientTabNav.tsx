@@ -10,6 +10,7 @@ interface Props {
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "👤" },
+  { id: "screenings", label: "Screenings", icon: "📊" },
   { id: "allergies", label: "Allergies", icon: "💊" },
   { id: "documents", label: "Documents", icon: "📁" },
   { id: "messages", label: "Messages", icon: "💬" },

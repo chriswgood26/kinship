@@ -7,6 +7,7 @@ import ClientMessagesPanel from "./ClientMessagesPanel";
 import ClientTabNav from "./ClientTabNav";
 import ClientDocumentsTab from "./ClientDocumentsTab";
 import ClientAllergiesTab from "./ClientAllergiesTab";
+import ClientScreeningsTab from "./ClientScreeningsTab";
 import AllergyWidget from "./AllergyWidget";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +87,14 @@ export default async function ClientDetailPage({
 
       {/* Tab navigation */}
       <ClientTabNav clientId={id} activeTab={activeTab} unreadMessageCount={unreadMessageCount} />
+
+      {/* Screenings tab */}
+      {activeTab === "screenings" && (
+        <ClientScreeningsTab
+          clientId={id}
+          clientName={`${client.last_name}, ${client.first_name}`}
+        />
+      )}
 
       {/* Allergies tab */}
       {activeTab === "allergies" && (
