@@ -54,6 +54,9 @@ export default async function BillingPage({
           <Link href="/dashboard/billing/denials" className={`px-4 py-2.5 rounded-xl font-semibold transition-colors text-sm border ${denied > 0 ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}>
             {denied > 0 ? `⚠️ ${denied} Denied` : "Denied Claims"}
           </Link>
+          <Link href="/dashboard/billing/appeals" className="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-200 transition-colors text-sm border border-slate-200">
+            Claim Appeals
+          </Link>
           <Link href="/dashboard/billing/clearinghouse" className="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-200 transition-colors text-sm border border-slate-200">
             Clearinghouse
           </Link>

@@ -572,6 +572,38 @@ create index if not exists idx_claim_denials_appeal_status
   on claim_denials(organization_id, appeal_status)
   where appeal_status != 'none';
 
+-- Claim appeal tracking — formal claim-level appeals (separate from auth appeals)
+create table if not exists claim_appeals (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  denial_id uuid references claim_denials(id) on delete cascade not null,
+  appeal_level text not null default 'level_1'  -- level_1, level_2, external_review
+    check (appeal_level in ('level_1','level_2','external_review')),
+  appeal_type text default 'written'             -- written, peer_to_peer, expedited, external
+    check (appeal_type in ('written','peer_to_peer','expedited','external')),
+  tracking_number text,                          -- payer-assigned appeal tracking / reference number
+  submitted_at date,
+  deadline date,
+  response_received_at date,
+  outcome text default 'pending'                 -- pending, approved, partially_approved, denied, withdrawn
+    check (outcome in ('pending','approved','partially_approved','denied','withdrawn')),
+  amount_appealed decimal(10,2),
+  amount_recovered decimal(10,2),
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_claim_appeals_org
+  on claim_appeals(organization_id, created_at desc);
+
+create index if not exists idx_claim_appeals_denial
+  on claim_appeals(denial_id);
+
+create index if not exists idx_claim_appeals_outcome
+  on claim_appeals(organization_id, outcome)
+  where outcome = 'pending';
+
 -- Appointment reminder log (tracks which reminders have been sent to prevent duplicates)
 create table if not exists appointment_reminder_log (
   id uuid primary key default gen_random_uuid(),

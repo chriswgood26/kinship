@@ -558,12 +558,20 @@ export default function DenialsClient({ initialDenials, deniableCharges }: Denia
             <p className="text-slate-500 text-sm mt-0.5">Track denied claims, reason codes, and appeal workflow</p>
           </div>
         </div>
-        <button
-          onClick={() => setLogOpen(true)}
-          className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 transition-colors text-sm"
-        >
-          + Log Denial
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/billing/appeals"
+            className="px-4 py-2.5 rounded-xl font-semibold transition-colors text-sm border bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+          >
+            Claim Appeals →
+          </Link>
+          <button
+            onClick={() => setLogOpen(true)}
+            className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 transition-colors text-sm"
+          >
+            + Log Denial
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
