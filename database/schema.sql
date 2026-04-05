@@ -1659,3 +1659,31 @@ create index if not exists idx_portal_reg_email on portal_registration_requests(
 
 -- Migration: add table if upgrading from earlier schema
 -- (safe to re-run — create table if not exists already guards it)
+
+-- ─── Workflow Rules Engine ────────────────────────────────────────────────────
+-- Configurable business rules for clinical workflows.
+-- Each rule has: trigger event, optional conditions (all must match), and actions to execute.
+
+create table if not exists workflow_rules (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  name text not null,
+  description text,
+  -- Trigger event that starts rule evaluation
+  -- e.g. encounter_created, note_unsigned_48h, auth_expiring_7d, client_admitted, claim_denied
+  trigger text not null,
+  -- JSON array of WorkflowCondition objects { field, operator, value }
+  -- All conditions must match for the rule to fire (AND logic)
+  conditions jsonb not null default '[]'::jsonb,
+  -- JSON array of WorkflowAction objects { type, message, task_title, recipient_role }
+  actions jsonb not null default '[]'::jsonb,
+  is_active boolean not null default true,
+  -- Execution order — lower priority number runs first
+  priority integer not null default 100,
+  created_by_clerk_id text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_workflow_rules_org on workflow_rules(organization_id, is_active);
+create index if not exists idx_workflow_rules_trigger on workflow_rules(organization_id, trigger);

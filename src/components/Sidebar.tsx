@@ -105,6 +105,7 @@ const navSections: NavSection[] = [
       { href: "/dashboard/admin/sliding-fee", label: "Sliding Fee", icon: "💲" },
       { href: "/dashboard/admin/clearinghouse", label: "Clearinghouse", icon: "🏥" },
       { href: "/dashboard/admin/communications", label: "Communications", icon: "📣" },
+      { href: "/dashboard/admin/workflow-rules", label: "Workflow Rules", icon: "⚡" },
       { href: "/dashboard/programs", label: "Programs & Services", icon: "🏥" },
       { href: "/dashboard/feedback", label: "Submit Feedback", icon: "💬" },
     ],
