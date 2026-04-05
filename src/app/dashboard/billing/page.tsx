@@ -51,6 +51,9 @@ export default async function BillingPage({
           <Link href="/dashboard/billing/ccbhc-pps" className="bg-violet-100 text-violet-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-violet-200 transition-colors text-sm border border-violet-200">
             CCBHC PPS
           </Link>
+          <Link href="/dashboard/billing/denials" className={`px-4 py-2.5 rounded-xl font-semibold transition-colors text-sm border ${denied > 0 ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}>
+            {denied > 0 ? `⚠️ ${denied} Denied` : "Denied Claims"}
+          </Link>
           <Link href="/dashboard/billing/clearinghouse" className="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-200 transition-colors text-sm border border-slate-200">
             Clearinghouse
           </Link>
@@ -142,7 +145,13 @@ export default async function BillingPage({
                     </td>
                     <td className="px-4 py-4 text-sm font-semibold text-slate-900">{charge.charge_amount ? `$${Number(charge.charge_amount).toFixed(2)}` : "—"}</td>
                     <td className="px-4 py-4">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${STATUS_COLORS[charge.status] || STATUS_COLORS.pending}`}>{charge.status}</span>
+                      {charge.status === "denied" ? (
+                        <Link href="/dashboard/billing/denials" className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${STATUS_COLORS.denied} hover:opacity-80 transition-opacity`}>
+                          denied →
+                        </Link>
+                      ) : (
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${STATUS_COLORS[charge.status] || STATUS_COLORS.pending}`}>{charge.status}</span>
+                      )}
                     </td>
                   </tr>
                 );

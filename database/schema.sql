@@ -533,6 +533,45 @@ create index if not exists idx_era_payment_lines_charge
   on era_payment_lines(charge_id)
   where charge_id is not null;
 
+-- Claim denial tracking — reason codes, appeal workflow
+create table if not exists claim_denials (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  charge_id uuid references charges(id) on delete cascade not null,
+  denial_date date not null default current_date,
+  denial_reason_code text not null,             -- CARC code, e.g. CO-16, CO-29, PR-1
+  denial_reason_description text,               -- human-readable description
+  denial_category text,                         -- medical_necessity, timely_filing, eligibility, duplicate, authorization, other
+  payer_name text,
+  payer_claim_number text,
+  original_charge_amount decimal(10,2),
+  denied_amount decimal(10,2),
+  appeal_status text not null default 'none'    -- none, in_progress, submitted, approved, denied
+    check (appeal_status in ('none','in_progress','submitted','approved','denied')),
+  appeal_deadline date,
+  appeal_submitted_at date,
+  appeal_notes text,
+  resolution text,                              -- corrected_resubmit, write_off, appeal_approved, appeal_denied, duplicate_void
+  resolved_at timestamptz,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Denial columns on charges table for quick filtering
+alter table charges add column if not exists denial_reason_code text;
+alter table charges add column if not exists denial_date date;
+
+create index if not exists idx_claim_denials_org
+  on claim_denials(organization_id, denial_date desc);
+
+create index if not exists idx_claim_denials_charge
+  on claim_denials(charge_id);
+
+create index if not exists idx_claim_denials_appeal_status
+  on claim_denials(organization_id, appeal_status)
+  where appeal_status != 'none';
+
 -- Appointment reminder log (tracks which reminders have been sent to prevent duplicates)
 create table if not exists appointment_reminder_log (
   id uuid primary key default gen_random_uuid(),
