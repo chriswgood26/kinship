@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { TRIGGER_LABELS, TEMPLATE_VARIABLES, CommEventTrigger } from "@/lib/commConstants";
 
 interface CommTemplate {
@@ -91,6 +91,28 @@ export default function CommunicationsClient({ rules: initRules, templates: init
   const [editingTemplate, setEditingTemplate] = useState<CommTemplate | null>(null);
   const [templateForm, setTemplateForm] = useState({ name: "", channel: "email", subject: "", body: "", sms_body: "" });
 
+  // ── Variable insertion ──
+  const [activeField, setActiveField] = useState<"subject" | "body" | "sms_body" | null>(null);
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const smsBodyRef = useRef<HTMLTextAreaElement>(null);
+
+  function insertVariable(varKey: string) {
+    const insertion = `{{${varKey}}}`;
+    const field = activeField ?? "body";
+    const elMap = { subject: subjectRef.current, body: bodyRef.current, sms_body: smsBodyRef.current };
+    const el = elMap[field] as HTMLInputElement | HTMLTextAreaElement | null;
+    if (!el) return;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const newValue = el.value.substring(0, start) + insertion + el.value.substring(end);
+    setTemplateForm(f => ({ ...f, [field]: newValue }));
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + insertion.length, start + insertion.length);
+    }, 0);
+  }
+
   const inputClass = "w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500";
   const labelClass = "text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1";
 
@@ -149,12 +171,14 @@ export default function CommunicationsClient({ rules: initRules, templates: init
   function openNewTemplate() {
     setEditingTemplate(null);
     setTemplateForm({ name: "", channel: "email", subject: "", body: "", sms_body: "" });
+    setActiveField("body");
     setShowTemplateForm(true);
   }
 
   function openEditTemplate(t: CommTemplate) {
     setEditingTemplate(t);
     setTemplateForm({ name: t.name, channel: t.channel, subject: t.subject || "", body: t.body, sms_body: t.sms_body || "" });
+    setActiveField("body");
     setShowTemplateForm(true);
   }
 
@@ -175,6 +199,7 @@ export default function CommunicationsClient({ rules: initRules, templates: init
       setTemplates(prev => [json.template, ...prev]);
     }
     setShowTemplateForm(false);
+    setActiveField(null);
     flash(editingTemplate ? "Template updated" : "Template created");
   }
 
@@ -318,12 +343,31 @@ export default function CommunicationsClient({ rules: initRules, templates: init
 
           {/* Variable legend */}
           <div className="bg-slate-50 rounded-2xl p-4">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Available Variables</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Available Variables
+                {showTemplateForm && (
+                  <span className="ml-2 normal-case font-normal text-teal-600">
+                    — click to insert into {activeField === "subject" ? "Subject" : activeField === "sms_body" ? "SMS Body" : "Email Body"}
+                  </span>
+                )}
+              </p>
+            </div>
             <div className="flex flex-wrap gap-2">
               {TEMPLATE_VARIABLES.map(v => (
-                <span key={v.key} className="text-xs font-mono bg-white border border-slate-200 px-2 py-1 rounded-lg text-teal-700">
+                <button
+                  key={v.key}
+                  type="button"
+                  title={showTemplateForm ? `Insert {{${v.key}}} into ${activeField === "subject" ? "Subject" : activeField === "sms_body" ? "SMS Body" : "Email Body"}` : v.label}
+                  onClick={() => showTemplateForm && insertVariable(v.key)}
+                  className={`text-xs font-mono px-2 py-1 rounded-lg border transition-colors ${
+                    showTemplateForm
+                      ? "bg-white border-teal-300 text-teal-700 hover:bg-teal-50 hover:border-teal-400 cursor-pointer"
+                      : "bg-white border-slate-200 text-teal-700 cursor-default"
+                  }`}
+                >
                   {`{{${v.key}}}`}
-                </span>
+                </button>
               ))}
             </div>
           </div>
@@ -342,17 +386,17 @@ export default function CommunicationsClient({ rules: initRules, templates: init
                   </select></div>
                 {(templateForm.channel === "email" || templateForm.channel === "both") && (
                   <div className="col-span-2"><label className={labelClass}>Email Subject</label>
-                    <input value={templateForm.subject} onChange={e => setTemplateForm(f => ({ ...f, subject: e.target.value }))} className={inputClass} placeholder="e.g. Your appointment is confirmed — {{appointment_date}}" /></div>
+                    <input ref={subjectRef} value={templateForm.subject} onChange={e => setTemplateForm(f => ({ ...f, subject: e.target.value }))} onFocus={() => setActiveField("subject")} className={inputClass} placeholder="e.g. Your appointment is confirmed — {{appointment_date}}" /></div>
                 )}
                 <div className="col-span-2">
                   <label className={labelClass}>{templateForm.channel === "sms" ? "SMS Body" : "Email Body (HTML or plain text)"}</label>
-                  <textarea value={templateForm.body} onChange={e => setTemplateForm(f => ({ ...f, body: e.target.value }))} className={inputClass} rows={6}
+                  <textarea ref={bodyRef} value={templateForm.body} onChange={e => setTemplateForm(f => ({ ...f, body: e.target.value }))} onFocus={() => setActiveField("body")} className={inputClass} rows={6}
                     placeholder={templateForm.channel === "sms" ? "Hi {{client_preferred_name}}, your appointment is on {{appointment_date}}. Reply STOP to opt out." : "<p>Hi {{client_preferred_name}},</p><p>Your appointment is confirmed for {{appointment_date}} at {{appointment_time}}.</p>"} />
                 </div>
                 {templateForm.channel === "both" && (
                   <div className="col-span-2">
                     <label className={labelClass}>SMS Body (separate from email)</label>
-                    <textarea value={templateForm.sms_body} onChange={e => setTemplateForm(f => ({ ...f, sms_body: e.target.value }))} className={inputClass} rows={3}
+                    <textarea ref={smsBodyRef} value={templateForm.sms_body} onChange={e => setTemplateForm(f => ({ ...f, sms_body: e.target.value }))} onFocus={() => setActiveField("sms_body")} className={inputClass} rows={3}
                       placeholder="Hi {{client_preferred_name}}, appointment on {{appointment_date}} at {{appointment_time}}. {{opt_out_text}}" />
                   </div>
                 )}
@@ -362,7 +406,7 @@ export default function CommunicationsClient({ rules: initRules, templates: init
                   className="bg-teal-500 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50">
                   {saving ? "Saving..." : "Save Template"}
                 </button>
-                <button onClick={() => setShowTemplateForm(false)} className="border border-slate-200 px-4 py-2 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button onClick={() => { setShowTemplateForm(false); setActiveField(null); }} className="border border-slate-200 px-4 py-2 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
               </div>
             </div>
           )}
