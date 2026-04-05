@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DocumentUploader from "@/components/DocumentUploader";
 import { useRouter } from "next/navigation";
+import { ROLE_CONFIGS, getRoleColor, getRoleLabel } from "@/lib/roles";
 
 interface UserProfile {
   id: string;
@@ -10,32 +11,12 @@ interface UserProfile {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
-  role: string;
+  roles: string[];
   title: string | null;
   credentials: string | null;
   npi: string | null;
   is_active: boolean;
 }
-
-const ROLES = ["admin", "clinician", "supervisor", "billing", "care_coordinator", "receptionist"];
-
-const ROLE_COLORS: Record<string, string> = {
-  admin: "bg-purple-100 text-purple-700",
-  clinician: "bg-teal-100 text-teal-700",
-  supervisor: "bg-blue-100 text-blue-700",
-  billing: "bg-amber-100 text-amber-700",
-  receptionist: "bg-slate-100 text-slate-600",
-  care_coordinator: "bg-emerald-100 text-emerald-700",
-};
-
-const ROLE_PERMS: Record<string, string> = {
-  admin: "Full access — all modules, users, settings",
-  clinician: "Patients, encounters, notes, treatment plans",
-  supervisor: "Clinician access + approve/review notes",
-  billing: "Billing, charges, claims — no clinical notes",
-  care_coordinator: "Scheduling, referrals, patient demographics",
-  receptionist: "Scheduling and patient check-in only",
-};
 
 export default function UsersClient({ users: initial, currentUserId, isAdmin = false }: {
   users: UserProfile[];
@@ -53,8 +34,22 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
   const [editForm, setEditForm] = useState<Partial<UserProfile & { supervisor_id?: string }>>({});
   const [inviteForm, setInviteForm] = useState({
     first_name: "", last_name: "", email: "",
-    role: "clinician", title: "", credentials: "", npi: "",
+    roles: ["clinician"] as string[], title: "", credentials: "", npi: "",
   });
+  const [activeRoleFilters, setActiveRoleFilters] = useState<Set<string>>(new Set());
+
+  function toggleRoleFilter(role: string) {
+    setActiveRoleFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(role)) next.delete(role);
+      else next.add(role);
+      return next;
+    });
+  }
+
+  const filteredUsers = activeRoleFilters.size === 0
+    ? users
+    : users.filter(u => u.roles.some(r => activeRoleFilters.has(r)));
 
   function startEdit(u: UserProfile) {
     setEditingId(u.id);
@@ -63,6 +58,11 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
 
   async function saveEdit() {
     if (!editingId) return;
+    if (!editForm.roles?.length) {
+      setSuccess("Error: At least one role is required");
+      setTimeout(() => setSuccess(""), 3000);
+      return;
+    }
     setEditSaving(true);
     try {
       const res = await fetch(`/api/admin/users/${editingId}`, {
@@ -115,7 +115,7 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
         setUsers(prev => [data.user, ...prev]);
         setSuccess(`Invitation sent to ${inviteForm.email}`);
         setInviteOpen(false);
-        setInviteForm({ first_name: "", last_name: "", email: "", role: "clinician", title: "", credentials: "", npi: "" });
+        setInviteForm({ first_name: "", last_name: "", email: "", roles: ["clinician"], title: "", credentials: "", npi: "" });
       } else {
         setSuccess(`Error: ${data.error || "Failed to invite"}`);
       }
@@ -151,29 +151,35 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
         </div>
       )}
 
-      {/* Summary */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Summary — clickable role filters */}
+      <div className="grid grid-cols-4 lg:grid-cols-7 gap-3">
         <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4">
           <div className="text-3xl font-bold text-slate-900">{activeCount}</div>
           <div className="text-sm text-slate-500 mt-0.5">Active Users</div>
         </div>
-        {[
-          { role: "clinician", label: "Clinicians" },
-          { role: "admin", label: "Admins" },
-          { role: "billing", label: "Billers" },
-        ].map(({ role, label }) => (
-          <div key={role} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-            <div className="text-3xl font-bold text-slate-900">
-              {users.filter(u => u.role === role).length}
-            </div>
-            <div className="text-sm text-slate-500 mt-0.5">{label}</div>
-          </div>
-        ))}
+        {ROLE_CONFIGS.map(rc => {
+          const count = users.filter(u => u.roles.includes(rc.name)).length;
+          const isActive = activeRoleFilters.has(rc.name);
+          return (
+            <button
+              key={rc.name}
+              onClick={() => toggleRoleFilter(rc.name)}
+              className={`text-left rounded-2xl p-4 border transition-all ${
+                isActive
+                  ? `${rc.color} border-current ring-2 ring-current/20`
+                  : "bg-slate-50 border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              <div className="text-3xl font-bold text-slate-900">{count}</div>
+              <div className="text-sm text-slate-500 mt-0.5">{rc.label}s</div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Users table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        {users.length === 0 ? (
+        {filteredUsers.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-4xl mb-3">👥</div>
             <p className="font-semibold text-slate-900 mb-1">No users yet</p>
@@ -192,7 +198,7 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {users.map(u => (
+              {filteredUsers.map(u => (
                 <>
                   <tr key={u.id} className={`hover:bg-slate-50 transition-colors ${!u.is_active ? "opacity-50" : ""}`}>
                     <td className="px-5 py-4">
@@ -211,9 +217,13 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${ROLE_COLORS[u.role] || "bg-slate-100 text-slate-600"}`}>
-                        {u.role?.replace("_", " ") || "—"}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {(u.roles || []).map(r => (
+                          <span key={r} className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleColor(r)}`}>
+                            {getRoleLabel(r)}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">{u.title || "—"}</td>
                     <td className="px-4 py-4 text-sm font-mono text-slate-600">{u.npi || "—"}</td>
@@ -245,17 +255,45 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
                         <div className="grid grid-cols-3 gap-4 mb-4">
                           <div><label className={labelClass}>First Name</label><input value={editForm.first_name || ""} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))} className={inputClass} /></div>
                           <div><label className={labelClass}>Last Name</label><input value={editForm.last_name || ""} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))} className={inputClass} /></div>
-                          <div><label className={labelClass}>Role</label>
-                            <select value={editForm.role || "clinician"} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))} className={inputClass}>
-                              {ROLES.map(r => <option key={r} value={r}>{r.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}</option>)}
-                            </select>
+                          <div>
+                            <label className={labelClass}>Roles</label>
+                            <div className={`${inputClass} flex flex-wrap gap-1 min-h-[38px] items-center`}>
+                              {(editForm.roles || []).map(r => (
+                                <span key={r} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${getRoleColor(r)}`}>
+                                  {getRoleLabel(r)}
+                                  <button type="button" onClick={() => setEditForm(f => ({
+                                    ...f,
+                                    roles: (f.roles || []).filter(x => x !== r),
+                                  }))} className="hover:opacity-70">×</button>
+                                </span>
+                              ))}
+                              <select
+                                value=""
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  if (val && !(editForm.roles || []).includes(val)) {
+                                    setEditForm(f => ({ ...f, roles: [...(f.roles || []), val] }));
+                                  }
+                                }}
+                                className="border-0 bg-transparent text-sm text-slate-400 focus:outline-none flex-1 min-w-[100px]"
+                              >
+                                <option value="">Add role...</option>
+                                {ROLE_CONFIGS.filter(rc => !(editForm.roles || []).includes(rc.name)).map(rc => (
+                                  <option key={rc.name} value={rc.name}>{rc.label}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                           <div><label className={labelClass}>Title</label><input value={editForm.title || ""} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="LCSW, LPC, MD..." /></div>
                           <div><label className={labelClass}>Credentials</label><input value={editForm.credentials || ""} onChange={e => setEditForm(f => ({ ...f, credentials: e.target.value }))} className={inputClass} placeholder="LCSW, PhD..." /></div>
                           <div><label className={labelClass}>NPI</label><input value={editForm.npi || ""} onChange={e => setEditForm(f => ({ ...f, npi: e.target.value }))} className={inputClass} placeholder="10-digit NPI" /></div>
                         </div>
                         <div className="text-xs text-slate-500 bg-white rounded-lg px-3 py-2 border border-slate-200 mb-3">
-                          <strong className="text-slate-700">{editForm.role?.replace("_", " ")} permissions:</strong> {ROLE_PERMS[editForm.role || "clinician"]}
+                          <strong className="text-slate-700">Permissions:</strong>{" "}
+                          {(editForm.roles || []).map(r => {
+                            const cfg = ROLE_CONFIGS.find(c => c.name === r);
+                            return cfg ? `${cfg.label}: ${cfg.description}` : r;
+                          }).join(" · ")}
                         </div>
                         <button onClick={saveEdit} disabled={editSaving}
                           className="bg-teal-500 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50">
@@ -294,14 +332,14 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
         )}
       </div>
 
-      {/* Role guide */}
+      {/* Role Permissions Key */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <h3 className="font-semibold text-slate-900 text-sm mb-3">Role Permissions</h3>
+        <h3 className="font-semibold text-slate-900 text-sm mb-3">Role Permissions Key</h3>
         <div className="grid grid-cols-3 gap-3">
-          {Object.entries(ROLE_PERMS).map(([role, desc]) => (
-            <div key={role} className={`${Object.entries(ROLE_COLORS).find(([r]) => r === role)?.[1]?.replace("text-", "border-")?.split(" ")[0] || ""} border rounded-xl p-3 bg-slate-50`}>
-              <div className="font-semibold text-slate-900 text-xs capitalize mb-1">{role.replace("_", " ")}</div>
-              <div className="text-xs text-slate-500">{desc}</div>
+          {ROLE_CONFIGS.map(rc => (
+            <div key={rc.name} className="border border-slate-200 rounded-xl p-3 bg-white">
+              <div className="font-semibold text-slate-900 text-xs mb-1">{rc.label}</div>
+              <div className="text-xs text-slate-500">{rc.description}</div>
             </div>
           ))}
         </div>
@@ -320,10 +358,34 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
               <div><label className={labelClass}>First Name *</label><input value={inviteForm.first_name} onChange={e => setInviteForm(f => ({ ...f, first_name: e.target.value }))} className={inputClass} /></div>
               <div><label className={labelClass}>Last Name *</label><input value={inviteForm.last_name} onChange={e => setInviteForm(f => ({ ...f, last_name: e.target.value }))} className={inputClass} /></div>
               <div className="col-span-2"><label className={labelClass}>Email Address *</label><input type="email" value={inviteForm.email} onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="clinician@beavertonmh.org" /></div>
-              <div><label className={labelClass}>Role *</label>
-                <select value={inviteForm.role} onChange={e => setInviteForm(f => ({ ...f, role: e.target.value }))} className={inputClass}>
-                  {ROLES.map(r => <option key={r} value={r}>{r.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}</option>)}
-                </select>
+              <div className="col-span-2">
+                <label className={labelClass}>Roles *</label>
+                <div className={`${inputClass} flex flex-wrap gap-1 min-h-[38px] items-center`}>
+                  {(inviteForm.roles || []).map(r => (
+                    <span key={r} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${getRoleColor(r)}`}>
+                      {getRoleLabel(r)}
+                      <button type="button" onClick={() => setInviteForm(f => ({
+                        ...f,
+                        roles: (f.roles || []).filter(x => x !== r),
+                      }))} className="hover:opacity-70">×</button>
+                    </span>
+                  ))}
+                  <select
+                    value=""
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val && !(inviteForm.roles || []).includes(val)) {
+                        setInviteForm(f => ({ ...f, roles: [...(f.roles || []), val] }));
+                      }
+                    }}
+                    className="border-0 bg-transparent text-sm text-slate-400 focus:outline-none flex-1 min-w-[100px]"
+                  >
+                    <option value="">Add role...</option>
+                    {ROLE_CONFIGS.filter(rc => !(inviteForm.roles || []).includes(rc.name)).map(rc => (
+                      <option key={rc.name} value={rc.name}>{rc.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div><label className={labelClass}>Title</label><input value={inviteForm.title} onChange={e => setInviteForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="LCSW, LPC..." /></div>
               <div><label className={labelClass}>Credentials</label><input value={inviteForm.credentials} onChange={e => setInviteForm(f => ({ ...f, credentials: e.target.value }))} className={inputClass} placeholder="LCSW, PhD..." /></div>
