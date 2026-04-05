@@ -9,6 +9,7 @@ import ClientTabNav from "./ClientTabNav";
 import ClientDocumentsTab from "./ClientDocumentsTab";
 import ClientAllergiesTab from "./ClientAllergiesTab";
 import ClientScreeningsTab from "./ClientScreeningsTab";
+import ClientOpeningBalancesTab from "./ClientOpeningBalancesTab";
 import AllergyWidget from "./AllergyWidget";
 import HousingStatusWidget from "./HousingStatusWidget";
 
@@ -109,6 +110,11 @@ export default async function ClientDetailPage({
       {/* Documents tab */}
       {activeTab === "documents" && (
         <ClientDocumentsTab clientId={id} />
+      )}
+
+      {/* Billing tab */}
+      {activeTab === "billing" && (
+        <ClientOpeningBalancesTab clientId={id} />
       )}
 
       {/* Messages tab */}

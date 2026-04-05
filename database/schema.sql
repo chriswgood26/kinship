@@ -1432,3 +1432,35 @@ create policy "org_form_submissions_update" on form_submissions
   for update using (organization_id = current_setting('app.current_org_id', true)::uuid);
 create policy "org_form_submissions_delete" on form_submissions
   for delete using (organization_id = current_setting('app.current_org_id', true)::uuid);
+
+-- Opening Balances (legacy AR from migrated systems)
+-- Tracks outstanding balances owed by clients at the time of migration from a prior system.
+-- These are not regular charges — they represent the starting A/R position inherited from legacy.
+create table if not exists client_opening_balances (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  balance_date date not null,                  -- as-of date in the legacy system
+  amount decimal(10,2) not null,               -- balance amount (positive = owed by client)
+  balance_type text default 'self_pay',        -- self_pay, copay, deductible, coinsurance, insurance, other
+  source_system text,                          -- e.g. "DrCloudEHR", "AdvancedMD", "Credible"
+  description text,                            -- free-text description (e.g. "Unpaid copays Q1 2025")
+  notes text,
+  created_by text,                             -- clerk_user_id of staff who entered this
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_opening_balances_client on client_opening_balances(client_id);
+create index if not exists idx_opening_balances_org on client_opening_balances(organization_id);
+
+alter table client_opening_balances enable row level security;
+
+create policy "org_opening_balances_select" on client_opening_balances
+  for select using (organization_id = current_setting('app.current_org_id', true)::uuid);
+create policy "org_opening_balances_insert" on client_opening_balances
+  for insert with check (organization_id = current_setting('app.current_org_id', true)::uuid);
+create policy "org_opening_balances_update" on client_opening_balances
+  for update using (organization_id = current_setting('app.current_org_id', true)::uuid);
+create policy "org_opening_balances_delete" on client_opening_balances
+  for delete using (organization_id = current_setting('app.current_org_id', true)::uuid);

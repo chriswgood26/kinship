@@ -13,6 +13,7 @@ const TABS = [
   { id: "screenings", label: "Screenings", icon: "📊" },
   { id: "allergies", label: "Allergies", icon: "💊" },
   { id: "documents", label: "Documents", icon: "📁" },
+  { id: "billing", label: "Billing", icon: "💵" },
   { id: "messages", label: "Messages", icon: "💬" },
 ];
 
