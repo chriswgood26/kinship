@@ -50,9 +50,14 @@ export default async function ClientsPage({
           <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
           <p className="text-slate-500 text-sm mt-0.5">{count ?? 0} total</p>
         </div>
-        <Link href="/dashboard/clients/new" className="bg-teal-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-400 transition-colors text-sm">
-          + New Client
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/clients/merge" className="border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-medium hover:bg-slate-50 transition-colors text-sm">
+            🔀 Merge Duplicates
+          </Link>
+          <Link href="/dashboard/clients/new" className="bg-teal-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-400 transition-colors text-sm">
+            + New Client
+          </Link>
+        </div>
       </div>
 
       {/* Search + filter */}
