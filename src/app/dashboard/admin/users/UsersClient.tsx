@@ -45,10 +45,11 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
   const [users, setUsers] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const router = useRouter();
 
+  const [editSaving, setEditSaving] = useState(false);
+  const [inviteSaving, setInviteSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserProfile & { supervisor_id?: string }>>({});
   const [inviteForm, setInviteForm] = useState({
     first_name: "", last_name: "", email: "",
@@ -62,21 +63,28 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
 
   async function saveEdit() {
     if (!editingId) return;
-    setSaving(true);
-    const res = await fetch(`/api/admin/users/${editingId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(editForm),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setUsers(prev => prev.map(u => u.id === editingId ? { ...u, ...editForm } : u));
-      setSuccess("User updated successfully");
-      setEditingId(null);
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/admin/users/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === editingId ? { ...u, ...editForm } : u));
+        setSuccess("User updated successfully");
+        setEditingId(null);
+      } else {
+        setSuccess(`Error: ${data.error || "Failed to save"}`);
+      }
+    } catch {
+      setSuccess("Error: Unable to save changes. Please try again.");
+    } finally {
+      setEditSaving(false);
+      setTimeout(() => setSuccess(""), 3000);
     }
-    setSaving(false);
-    setTimeout(() => setSuccess(""), 3000);
   }
 
   async function toggleActive(u: UserProfile) {
@@ -94,24 +102,29 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
   }
 
   async function sendInvite() {
-    setSaving(true);
-    const res = await fetch("/api/admin/users/invite", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(inviteForm),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setUsers(prev => [data.user, ...prev]);
-      setSuccess(`Invitation sent to ${inviteForm.email}`);
-      setInviteOpen(false);
-      setInviteForm({ first_name: "", last_name: "", email: "", role: "clinician", title: "", credentials: "", npi: "" });
-    } else {
-      setSuccess(`Error: ${data.error || "Failed to invite"}`);
+    setInviteSaving(true);
+    try {
+      const res = await fetch("/api/admin/users/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(inviteForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(prev => [data.user, ...prev]);
+        setSuccess(`Invitation sent to ${inviteForm.email}`);
+        setInviteOpen(false);
+        setInviteForm({ first_name: "", last_name: "", email: "", role: "clinician", title: "", credentials: "", npi: "" });
+      } else {
+        setSuccess(`Error: ${data.error || "Failed to invite"}`);
+      }
+    } catch {
+      setSuccess("Error: Unable to send invitation. Please try again.");
+    } finally {
+      setInviteSaving(false);
+      setTimeout(() => setSuccess(""), 4000);
     }
-    setSaving(false);
-    setTimeout(() => setSuccess(""), 4000);
   }
 
   const inputClass = "w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500";
@@ -244,9 +257,9 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
                         <div className="text-xs text-slate-500 bg-white rounded-lg px-3 py-2 border border-slate-200 mb-3">
                           <strong className="text-slate-700">{editForm.role?.replace("_", " ")} permissions:</strong> {ROLE_PERMS[editForm.role || "clinician"]}
                         </div>
-                        <button onClick={saveEdit} disabled={saving}
+                        <button onClick={saveEdit} disabled={editSaving}
                           className="bg-teal-500 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50">
-                          {saving ? "Saving..." : "Save Changes"}
+                          {editSaving ? "Saving..." : "Save Changes"}
                         </button>
                       </td>
                     </tr>
@@ -323,9 +336,9 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
 
             <div className="flex gap-3">
               <button onClick={() => setInviteOpen(false)} className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
-              <button onClick={sendInvite} disabled={saving || !inviteForm.email || !inviteForm.first_name || !inviteForm.last_name}
+              <button onClick={sendInvite} disabled={inviteSaving || !inviteForm.email || !inviteForm.first_name || !inviteForm.last_name}
                 className="flex-1 bg-teal-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50">
-                {saving ? "Sending..." : "Send Invitation"}
+                {inviteSaving ? "Sending..." : "Send Invitation"}
               </button>
             </div>
           </div>
