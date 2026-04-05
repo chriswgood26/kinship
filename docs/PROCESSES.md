@@ -9,7 +9,7 @@
 
 ## Deployment Workflow
 
-### Automated (Task Poller)
+### Automated (WorkBot)
 1. Poller picks up Jarvis-assigned tasks from Project Tracker
 2. Claude Code implements changes in `~/projects/kinship`
 3. Deploys to **KS (staging)** automatically
@@ -40,10 +40,10 @@ cd ~/projects/kinship
 vercel --prod --yes
 ```
 
-## Task Automation (Poller)
+## WorkBot (Automated Task Runner)
 
 ### How It Works
-- Bun script at `~/.claude/scripts/task-poller.ts`
+- Bun script at `~/.claude/scripts/workbot (task-poller).ts`
 - Runs every 5 minutes via macOS crontab
 - Queries Supabase for tasks assigned to "Jarvis" with status "todo"
 - Picks highest priority first, oldest within same priority
@@ -96,5 +96,5 @@ vercel --prod --yes
 
 ## Monitoring
 - **Claude Code Dashboard**: `http://localhost:3131` — session activity, API usage, agent status
-- **Task Poller Log**: `~/.claude/scripts/task-poller.log`
+- **WorkBot Log**: `~/.claude/scripts/workbot (task-poller).log`
 - **Telegram**: real-time notifications for task start/complete/fail
