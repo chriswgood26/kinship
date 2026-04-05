@@ -312,7 +312,7 @@ function NewReferralForm() {
             setForm(f => ({
               ...f,
               referral_date: newDate,
-              due_date: referralDueDays ? addDays(newDate, referralDueDays.days, referralDueDays.business_days) : f.due_date,
+              due_date: newDate && referralDueDays ? addDays(newDate, referralDueDays.days, referralDueDays.business_days) : f.due_date,
             }));
           }} className={inputClass} /></div>
           <div><label className={labelClass}>Due / Response By</label><input type="date" value={form.due_date} onChange={e => set("due_date", e.target.value)} className={inputClass} /></div>
