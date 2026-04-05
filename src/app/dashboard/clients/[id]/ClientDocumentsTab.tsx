@@ -3,6 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import DocumentUploader from "@/components/DocumentUploader";
+import PatientIDDocuments from "@/components/PatientIDDocuments";
 
 const InsuranceCardCapture = dynamic(() => import("@/components/InsuranceCardCapture"), { ssr: false });
 const IDCardCapture = dynamic(() => import("@/components/IDCardCapture"), { ssr: false });
@@ -98,6 +99,9 @@ export default function ClientDocumentsTab({ clientId }: Props) {
           <p className="text-xs text-emerald-600">Review the data above and update the client&apos;s demographics if needed.</p>
         </div>
       )}
+
+      {/* Photos & ID Documents */}
+      <PatientIDDocuments clientId={clientId} />
 
       {/* Main document uploader */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">

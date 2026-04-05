@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CareTeam from "@/components/CareTeam";
+import PatientPhotoUpload from "@/components/PatientPhotoUpload";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
@@ -61,9 +62,12 @@ export default async function ClientDetailPage({
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/clients" className="text-slate-400 hover:text-slate-700 mt-1">←</Link>
-          <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center text-teal-700 font-bold text-xl flex-shrink-0">
-            {client.first_name?.[0]}{client.last_name?.[0]}
-          </div>
+          <PatientPhotoUpload
+            clientId={id}
+            firstName={client.first_name}
+            lastName={client.last_name}
+            size={56}
+          />
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-slate-900">{client.last_name}, {client.first_name}

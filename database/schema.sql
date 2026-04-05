@@ -321,6 +321,7 @@ alter table documents add column if not exists referral_id uuid references refer
 alter table documents add column if not exists user_profile_id uuid references user_profiles(id) on delete cascade;
 alter table documents add column if not exists thumbnail_path text;
 alter table documents add column if not exists ocr_data jsonb;
+alter table documents add column if not exists tag text; -- patient_photo, government_id, insurance_card, other_id
 
 -- Waitlist (for landing page signups)
 create table if not exists waitlist (

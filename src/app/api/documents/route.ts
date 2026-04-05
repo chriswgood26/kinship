@@ -9,10 +9,12 @@ export async function GET(req: NextRequest) {
   const patientId = searchParams.get("patient_id");
   const referralId = searchParams.get("referral_id");
   const userProfileId = searchParams.get("user_profile_id");
+  const tag = searchParams.get("tag");
   let query = supabaseAdmin.from("documents").select("*").order("created_at", { ascending: false });
   if (patientId) query = query.eq("client_id", patientId);
   if (referralId) query = query.eq("referral_id", referralId);
   if (userProfileId) query = query.eq("user_profile_id", userProfileId);
+  if (tag) query = query.eq("tag", tag);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ documents: data || [] });
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
   const userProfileId = formData.get("user_profile_id") as string | null;
   const category = formData.get("category") as string || "general";
   const notes = formData.get("notes") as string || "";
+  const tag = formData.get("tag") as string | null;
 
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest) {
     storage_path: storagePath,
     category,
     notes: notes || null,
+    tag: tag || null,
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
