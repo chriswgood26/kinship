@@ -2,6 +2,7 @@ import Link from "next/link";
 import CareTeam from "@/components/CareTeam";
 import PatientPhotoUpload from "@/components/PatientPhotoUpload";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getOrgId } from "@/lib/getOrgId";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import ClientMessagesPanel from "./ClientMessagesPanel";
@@ -12,6 +13,7 @@ import ClientScreeningsTab from "./ClientScreeningsTab";
 import ClientOpeningBalancesTab from "./ClientOpeningBalancesTab";
 import AllergyWidget from "./AllergyWidget";
 import HousingStatusWidget from "./HousingStatusWidget";
+import ClientProgramRequirementsWidget from "./ClientProgramRequirementsWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,8 @@ export default async function ClientDetailPage({
   const { id } = await params;
   const { tab } = await searchParams;
   const activeTab = tab || "overview";
+
+  const orgId = await getOrgId(user.id);
 
   const [{ data: client }, { data: appointments }, { data: encounters }, { data: unreadMsgs }] = await Promise.all([
     supabaseAdmin.from("clients").select("*, primary_clinician:primary_clinician_id(id, first_name, last_name, credentials)").eq("id", id).single(),
@@ -241,6 +245,14 @@ export default async function ClientDetailPage({
               <Link href={`/dashboard/clients/${id}/housing`} className="text-xs text-teal-600 font-medium hover:text-teal-700">Manage →</Link>
             </div>
             <HousingStatusWidget clientId={id} />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-slate-900 text-sm">Programs & Requirements</h2>
+              <Link href="/dashboard/programs" className="text-xs text-teal-600 font-medium hover:text-teal-700">All programs →</Link>
+            </div>
+            <ClientProgramRequirementsWidget clientId={id} orgId={orgId} />
           </div>
         </div>
       </div>}
