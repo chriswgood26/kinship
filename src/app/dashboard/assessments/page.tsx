@@ -103,6 +103,13 @@ export default async function AssessmentsPage() {
           <div className="text-sm text-slate-500 mt-1">Addiction Severity Index (5th Ed.) — comprehensive SUD assessment covering 7 domains: medical, employment, alcohol, drugs, legal, family, and psychiatric</div>
           <div className="mt-3 text-xs text-orange-600 font-semibold">SUD Assessment · McLellan et al.</div>
         </Link>
+        <Link href="/dashboard/assessments/basis24/new"
+          className="bg-white rounded-2xl border-2 border-teal-200 hover:border-teal-400 p-5 text-left transition-all hover:shadow-sm">
+          <div className="text-3xl mb-3">📊</div>
+          <div className="font-bold text-slate-900">BASIS-24</div>
+          <div className="text-sm text-slate-500 mt-1">Behavior and Symptom Identification Scale — 24-item self-report outcomes measure covering depression, relationships, self-harm, emotional lability, psychosis, and substance use</div>
+          <div className="mt-3 text-xs text-teal-600 font-semibold">Outcomes Measure · McLean Hospital</div>
+        </Link>
       </div>
 
       {/* Past assessments */}
@@ -122,6 +129,7 @@ export default async function AssessmentsPage() {
                   a.assessment_type === "CUMHA" ? `/dashboard/assessments/cumha/${a.id}` :
                   a.assessment_type === "Psych Eval" ? `/dashboard/assessments/psych-eval/${a.id}` :
                   a.assessment_type === "ASI" ? `/dashboard/assessments/asi/${a.id}` :
+                  a.assessment_type === "BASIS-24" ? `/dashboard/assessments/basis24/${a.id}` :
                   `/dashboard/assessments/imcans/${a.id}`
                 }
                   className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors no-underline">
