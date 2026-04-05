@@ -141,6 +141,7 @@ export default async function ReportsPage() {
             { label: "Staff Productivity", desc: "Clinician metrics, billable hours, benchmarks", href: "/dashboard/reports/productivity", icon: "🏆", highlight: false },
             { label: "No-Show & Cancellations", desc: "Attendance rate, no-show trends, provider breakdown", href: "/dashboard/reports/attendance", icon: "🚫", highlight: false },
             { label: "Medicaid Compliance Export", desc: "State Medicaid client services & billing export", href: "/dashboard/reports/medicaid", icon: "🏥", highlight: false },
+            { label: "Skills Progress", desc: "Skill acquisition data, mastery rates, trend analysis", href: "/dashboard/reports/skills", icon: "🎯", highlight: false },
           ].map(r => (
             <Link key={r.label} href={r.href}
               className={`bg-white rounded-2xl border p-4 hover:shadow-sm transition-shadow no-underline ${
