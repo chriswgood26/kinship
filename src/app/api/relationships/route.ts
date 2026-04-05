@@ -66,10 +66,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const body = await req.json();
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", userId).single();
-
-  const orgId = profile?.organization_id || "34e600b3-beb0-440c-88c4-20032185e727";
 
   const { data, error } = await supabaseAdmin.from("patient_relationships").insert({
     organization_id: orgId,

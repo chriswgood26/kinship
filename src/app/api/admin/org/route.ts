@@ -9,10 +9,11 @@ const ALLOWED_COLUMNS = ["name", "npi", "tax_id", "phone", "email", "website", "
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const { data, error } = await supabaseAdmin
     .from("organizations")
     .select("id, name, npi, tax_id, phone, email, client_terminology, pay_period_type, pay_period_start_day, pay_period_start_date, field_config, billing_contact_name, billing_contact_email, billing_contact_phone")
-    .eq("id", "34e600b3-beb0-440c-88c4-20032185e727")
+    .eq("id", orgId)
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ org: data });

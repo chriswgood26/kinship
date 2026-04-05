@@ -16,7 +16,8 @@ export default async function BedManagementPage() {
     .select("organization_id")
     .eq("clerk_user_id", user.id)
     .single();
-  const orgId = _profile?.organization_id || "34e600b3-beb0-440c-88c4-20032185e727";
+  const orgId = _profile?.organization_id;
+  if (!orgId) redirect("/sign-in");
 
 
   const { data: facilities } = await supabaseAdmin

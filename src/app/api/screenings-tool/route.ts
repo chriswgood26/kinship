@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
 
   const orgId = await getOrgId(userId);
   const client_id = new URL(req.url).searchParams.get("patient_id");
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", userId).single();
-  let query = supabaseAdmin.from("screenings").select("*").eq("organization_id", profile?.organization_id || "34e600b3-beb0-440c-88c4-20032185e727").order("administered_at", { ascending: false }).limit(20);
+  let query = supabaseAdmin.from("screenings").select("*").eq("organization_id", orgId).order("administered_at", { ascending: false }).limit(20);
   if (client_id) query = query.eq("client_id", client_id);
   const { data } = await query;
   return NextResponse.json({ screenings: data || [] });
@@ -19,10 +18,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const body = await req.json();
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", userId).single();
   const { data, error } = await supabaseAdmin.from("screenings").insert({
-    organization_id: profile?.organization_id || "34e600b3-beb0-440c-88c4-20032185e727",
+    organization_id: orgId,
     client_id: body.client_id,
     tool: body.tool,
     answers: body.answers || {},

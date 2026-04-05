@@ -9,9 +9,8 @@ export async function POST(req: NextRequest) {
 
   const orgId = await getOrgId(userId);
   const body = await req.json();
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", userId).single();
   const { data, error } = await supabaseAdmin.from("medication_orders").insert({
-    organization_id: profile?.organization_id || "34e600b3-beb0-440c-88c4-20032185e727",
+    organization_id: orgId,
     client_id: body.client_id,
     medication_name: body.medication_name,
     generic_name: body.generic_name || null,
