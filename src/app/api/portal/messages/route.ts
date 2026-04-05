@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       .from("user_profiles")
       .select("clerk_user_id, email, first_name, last_name")
       .eq("organization_id", orgId)
-      .in("role", ["clinician", "admin", "supervisor", "billing"]);
+      .overlaps("roles", ["clinician", "admin", "supervisor", "billing"]);
 
     const clientName = client ? `${client.first_name} ${client.last_name}` : "a client";
 

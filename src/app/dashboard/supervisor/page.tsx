@@ -14,12 +14,12 @@ export default async function SupervisorPage({
 
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
-    .select("id, role, first_name, last_name")
+    .select("id, role, roles, first_name, last_name")
     .eq("clerk_user_id", user.id)
     .single();
 
   // Only supervisors and admins
-  if (profile?.role !== "supervisor" && profile?.role !== "admin") {
+  if (!profile?.roles?.some((r: string) => ["supervisor", "admin"].includes(r))) {
     redirect("/dashboard");
   }
 
@@ -35,7 +35,7 @@ export default async function SupervisorPage({
   const { data: allClinicians } = await supabaseAdmin
     .from("user_profiles")
     .select("id, first_name, last_name, credentials, role, clerk_user_id, organization_id")
-    .in("role", ["clinician", "supervisor"])
+    .overlaps("roles", ["clinician", "supervisor"])
     .order("last_name");
 
   const params = await searchParams;

@@ -14,11 +14,11 @@ export async function POST(req: NextRequest) {
   // Only admins can request plan changes
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
-    .select("role")
+    .select("roles")
     .eq("clerk_user_id", userId)
     .single();
 
-  if (!profile || profile.role !== "admin") {
+  if (!profile || !profile.roles?.includes("admin")) {
     return NextResponse.json({ error: "Only organization admins can request plan changes" }, { status: 403 });
   }
 

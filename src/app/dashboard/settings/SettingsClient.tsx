@@ -27,7 +27,7 @@ const PLAN_COLORS: Record<Plan, { border: string; badge: string; btn: string }> 
   custom:   { border: "border-amber-300",  badge: "bg-amber-50 text-amber-700",    btn: "bg-amber-500 hover:bg-amber-400 text-white" },
 };
 
-export default function SettingsClient({ org, userRole = "clinician" }: { org: Org | null; userRole?: string }) {
+export default function SettingsClient({ org, userRoles = ["clinician"] }: { org: Org | null; userRoles?: string[] }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -304,7 +304,7 @@ export default function SettingsClient({ org, userRole = "clinician" }: { org: O
                     ))}
                   </ul>
 
-                  {userRole === "admin" && (
+                  {userRoles.includes("admin") && (
                     isCurrent ? (
                       <div className="text-center text-xs text-slate-400 py-1.5 font-medium">Active Plan</div>
                     ) : isPendingRequest ? (

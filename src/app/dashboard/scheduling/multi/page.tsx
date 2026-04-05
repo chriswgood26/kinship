@@ -53,7 +53,7 @@ export default async function MultiProviderSchedulePage({
     .from("user_profiles")
     .select("id, clerk_user_id, first_name, last_name, title, credentials, role")
     .eq("organization_id", orgId)
-    .in("role", ["clinician", "supervisor", "admin"])
+    .overlaps("roles", ["clinician", "supervisor", "admin"])
     .eq("is_active", true)
     .order("last_name");
 

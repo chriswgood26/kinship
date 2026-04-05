@@ -80,7 +80,7 @@ export async function POST(
     .from("user_profiles")
     .select("email, first_name, last_name")
     .eq("organization_id", org.id)
-    .in("role", ["admin", "care_coordinator", "receptionist"])
+    .overlaps("roles", ["admin", "care_coordinator", "receptionist"])
     .not("email", "is", null)
     .limit(5);
 
@@ -124,7 +124,7 @@ export async function POST(
     .from("user_profiles")
     .select("clerk_user_id")
     .eq("organization_id", org.id)
-    .in("role", ["admin", "care_coordinator", "receptionist"])
+    .overlaps("roles", ["admin", "care_coordinator", "receptionist"])
     .limit(5);
 
   if (adminProfiles?.length) {

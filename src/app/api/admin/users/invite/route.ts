@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       first_name: body.first_name,
       last_name: body.last_name,
       email: body.email,
-      role: body.role || "clinician",
+      roles: body.roles || ["clinician"],
       title: body.title || null,
       credentials: body.credentials || null,
       npi: body.npi || null,

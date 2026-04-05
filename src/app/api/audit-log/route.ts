@@ -32,11 +32,11 @@ export async function GET(req: NextRequest) {
   // Only admin / supervisor roles may read audit logs
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
-    .select("role")
+    .select("roles")
     .eq("clerk_user_id", userId)
     .single();
 
-  if (!profile || !["admin", "supervisor"].includes(profile.role)) {
+  if (!profile || !profile.roles?.some((r: string) => ["admin", "supervisor"].includes(r))) {
     return NextResponse.json({ error: "Forbidden: insufficient role" }, { status: 403 });
   }
 

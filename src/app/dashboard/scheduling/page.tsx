@@ -54,7 +54,7 @@ export default async function SchedulingPage({
     .from("user_profiles")
     .select("id, first_name, last_name, title, role")
     .eq("organization_id", orgId || "")
-    .in("role", ["clinician", "supervisor", "admin"])
+    .overlaps("roles", ["clinician", "supervisor", "admin"])
     .order("last_name");
 
   const { data: org } = await supabaseAdmin.from("organizations").select("plan, addons").eq("id", orgId || "").single();
