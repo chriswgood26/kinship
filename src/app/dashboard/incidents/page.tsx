@@ -65,10 +65,16 @@ export default async function IncidentsPage({
           <h1 className="text-2xl font-bold text-slate-900">Incident Reports</h1>
           <p className="text-slate-500 text-sm mt-0.5">Document, track and report behavioral and safety incidents</p>
         </div>
-        <Link href="/dashboard/incidents/new"
-          className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 transition-colors text-sm">
-          + Report Incident
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/reports/incidents"
+            className="bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-50 transition-colors text-sm">
+            📊 Summary &amp; Trends
+          </Link>
+          <Link href="/dashboard/incidents/new"
+            className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 transition-colors text-sm">
+            + Report Incident
+          </Link>
+        </div>
       </div>
 
       {/* Alerts */}

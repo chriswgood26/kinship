@@ -136,6 +136,7 @@ export default async function ReportsPage() {
             { label: "Pending Billing", desc: "Charges awaiting submission", href: "/dashboard/billing?status=pending", icon: "💰", alert: (pendingCharges ?? 0) > 0 },
             { label: "Encounters", desc: "Encounter volume by date", href: "/dashboard/reports/encounters", icon: "⚕️", highlight: false },
             { label: "Caseload", desc: "Client assignments", href: "/dashboard/reports/caseload", icon: "👤", highlight: false },
+            { label: "Incident Summary", desc: "Incident trends and compliance", href: "/dashboard/reports/incidents", icon: "🚨", highlight: false },
           ].map(r => (
             <Link key={r.label} href={r.href}
               className={`bg-white rounded-2xl border p-4 hover:shadow-sm transition-shadow no-underline ${
