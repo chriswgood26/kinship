@@ -1351,3 +1351,28 @@ alter table clients add column if not exists primary_clinician_id uuid reference
 alter table clients add column if not exists primary_clinician_name text;
 
 create index if not exists idx_clients_primary_clinician on clients(primary_clinician_id) where primary_clinician_id is not null;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Extended insurance fields (populated by OCR insurance card capture)
+-- ─────────────────────────────────────────────────────────────────────────────
+alter table clients add column if not exists insurance_plan_name text;
+alter table clients add column if not exists insurance_rx_bin text;
+alter table clients add column if not exists insurance_subscriber_name text;
+alter table clients add column if not exists insurance_copay numeric(10,2);       -- monetary amount, e.g. 20.00
+alter table clients add column if not exists insurance_deductible numeric(10,2);
+alter table clients add column if not exists insurance_deductible_met numeric(10,2);
+alter table clients add column if not exists insurance_oop_max numeric(10,2);
+alter table clients add column if not exists insurance_oop_met numeric(10,2);
+alter table clients add column if not exists insurance_effective_date date;
+alter table clients add column if not exists insurance_verified_date date;
+
+-- Extended secondary insurance
+alter table clients add column if not exists insurance_secondary_plan_name text;
+alter table clients add column if not exists insurance_secondary_rx_bin text;
+alter table clients add column if not exists insurance_secondary_subscriber_name text;
+alter table clients add column if not exists insurance_secondary_copay numeric(10,2);
+alter table clients add column if not exists insurance_secondary_effective_date date;
+
+-- Government ID fields (populated by OCR ID card capture)
+alter table clients add column if not exists government_id_number text;
+alter table clients add column if not exists government_id_state text;

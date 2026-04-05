@@ -20,8 +20,45 @@ interface Props {
   onClose: () => void;
 }
 
+// Map OCR-extracted insurance fields to client database columns (primary insurance)
+function buildClientPatch(fields: Partial<InsuranceFields>): Record<string, string | number | null> {
+  const patch: Record<string, string | number | null> = {};
+  if (fields.provider !== undefined) patch.insurance_provider = fields.provider || null;
+  if (fields.memberId !== undefined) patch.insurance_member_id = fields.memberId || null;
+  if (fields.groupNumber !== undefined) patch.insurance_group_number = fields.groupNumber || null;
+  if (fields.planName !== undefined) patch.insurance_plan_name = fields.planName || null;
+  if (fields.rxBin !== undefined) patch.insurance_rx_bin = fields.rxBin || null;
+  if (fields.subscriberName !== undefined) patch.insurance_subscriber_name = fields.subscriberName || null;
+  if (fields.copay !== undefined) {
+    // Strip currency symbols and parse as number
+    const raw = (fields.copay || "").replace(/[$,\s]/g, "");
+    const num = parseFloat(raw);
+    patch.insurance_copay = isNaN(num) ? null : num;
+  }
+  if (fields.effectiveDate !== undefined) {
+    // Normalize date string to YYYY-MM-DD for Postgres date column
+    const raw = fields.effectiveDate || "";
+    let normalized: string | null = null;
+    if (raw) {
+      const parts = raw.split(/[\/\-]/);
+      if (parts.length === 3) {
+        const [a, b, c] = parts;
+        if (c.length === 4) {
+          // MM/DD/YYYY → YYYY-MM-DD
+          normalized = `${c}-${a.padStart(2, "0")}-${b.padStart(2, "0")}`;
+        } else if (a.length === 4) {
+          // Already YYYY-MM-DD
+          normalized = raw;
+        }
+      }
+    }
+    patch.insurance_effective_date = normalized;
+  }
+  return patch;
+}
+
 export default function InsuranceCardCapture({ clientId, onExtracted, onClose }: Props) {
-  const [phase, setPhase] = useState<"scanner" | "processing" | "review" | "done">("scanner");
+  const [phase, setPhase] = useState<"scanner" | "processing" | "review" | "saving" | "done">("scanner");
   const [preview, setPreview] = useState<string | null>(null);
   const [fields, setFields] = useState<Partial<InsuranceFields>>({});
   const [docId, setDocId] = useState<string | null>(null);
@@ -70,9 +107,27 @@ export default function InsuranceCardCapture({ clientId, onExtracted, onClose }:
     }
   }
 
-  function handleConfirm() {
-    if (onExtracted) onExtracted(fields);
-    setPhase("done");
+  async function handleConfirm() {
+    setPhase("saving");
+    setError("");
+    try {
+      const patch = buildClientPatch(fields);
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to save insurance data");
+      }
+      if (onExtracted) onExtracted(fields);
+      setPhase("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save. Please try again.");
+      setPhase("review");
+    }
   }
 
   if (phase === "scanner") {
@@ -102,14 +157,23 @@ export default function InsuranceCardCapture({ clientId, onExtracted, onClose }:
         </div>
 
         <div className="overflow-y-auto p-5 space-y-4">
-          {phase === "processing" && (
+          {(phase === "processing" || phase === "saving") && (
             <div className="text-center py-8 space-y-3">
               {preview && (
                 <img src={preview} alt="Insurance card" className="w-full max-h-40 object-contain rounded-xl bg-slate-100 mx-auto" />
               )}
               <div className="animate-spin text-3xl">⏳</div>
-              <p className="text-sm text-slate-600 font-medium">Processing insurance card…</p>
-              <p className="text-xs text-slate-400">Uploading and running OCR extraction</p>
+              {phase === "processing" ? (
+                <>
+                  <p className="text-sm text-slate-600 font-medium">Processing insurance card…</p>
+                  <p className="text-xs text-slate-400">Uploading and running OCR extraction</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600 font-medium">Saving insurance data…</p>
+                  <p className="text-xs text-slate-400">Updating client record with extracted fields</p>
+                </>
+              )}
             </div>
           )}
 

@@ -76,7 +76,7 @@ export default function ClientDocumentsTab({ clientId }: Props) {
               </div>
             ))}
           </div>
-          <p className="text-xs text-blue-600">Review the data above and update the client&apos;s insurance fields in their profile if needed.</p>
+          <p className="text-xs text-blue-600">✓ Insurance data has been saved to the client&apos;s record. You can review and edit it in the client&apos;s profile.</p>
         </div>
       )}
 
@@ -96,7 +96,7 @@ export default function ClientDocumentsTab({ clientId }: Props) {
               </div>
             ))}
           </div>
-          <p className="text-xs text-emerald-600">Review the data above and update the client&apos;s demographics if needed.</p>
+          <p className="text-xs text-emerald-600">✓ ID data has been saved to the client&apos;s record. You can review and edit demographics in the client&apos;s profile.</p>
         </div>
       )}
 

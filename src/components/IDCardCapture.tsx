@@ -19,8 +19,21 @@ interface Props {
   onClose: () => void;
 }
 
+// Map OCR-extracted ID fields to client database columns
+function buildClientPatch(fields: Partial<IDFields>): Record<string, string | null> {
+  const patch: Record<string, string | null> = {};
+  if (fields.firstName !== undefined) patch.first_name = fields.firstName || null;
+  if (fields.lastName !== undefined) patch.last_name = fields.lastName || null;
+  if (fields.dob !== undefined) patch.date_of_birth = fields.dob || null;
+  if (fields.gender !== undefined) patch.gender = fields.gender || null;
+  if (fields.address !== undefined) patch.address_line1 = fields.address || null;
+  if (fields.idNumber !== undefined) patch.government_id_number = fields.idNumber || null;
+  if (fields.state !== undefined) patch.government_id_state = fields.state || null;
+  return patch;
+}
+
 export default function IDCardCapture({ clientId, onExtracted, onClose }: Props) {
-  const [phase, setPhase] = useState<"scanner" | "processing" | "review" | "done">("scanner");
+  const [phase, setPhase] = useState<"scanner" | "processing" | "review" | "saving" | "done">("scanner");
   const [preview, setPreview] = useState<string | null>(null);
   const [fields, setFields] = useState<Partial<IDFields>>({});
   const [error, setError] = useState("");
@@ -67,9 +80,27 @@ export default function IDCardCapture({ clientId, onExtracted, onClose }: Props)
     }
   }
 
-  function handleConfirm() {
-    if (onExtracted) onExtracted(fields);
-    setPhase("done");
+  async function handleConfirm() {
+    setPhase("saving");
+    setError("");
+    try {
+      const patch = buildClientPatch(fields);
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to save ID data");
+      }
+      if (onExtracted) onExtracted(fields);
+      setPhase("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save. Please try again.");
+      setPhase("review");
+    }
   }
 
   if (phase === "scanner") {
@@ -99,14 +130,23 @@ export default function IDCardCapture({ clientId, onExtracted, onClose }: Props)
         </div>
 
         <div className="overflow-y-auto p-5 space-y-4">
-          {phase === "processing" && (
+          {(phase === "processing" || phase === "saving") && (
             <div className="text-center py-8 space-y-3">
               {preview && (
                 <img src={preview} alt="ID card" className="w-full max-h-40 object-contain rounded-xl bg-slate-100 mx-auto" />
               )}
               <div className="animate-spin text-3xl">⏳</div>
-              <p className="text-sm text-slate-600 font-medium">Processing ID card…</p>
-              <p className="text-xs text-slate-400">Uploading and extracting patient information</p>
+              {phase === "processing" ? (
+                <>
+                  <p className="text-sm text-slate-600 font-medium">Processing ID card…</p>
+                  <p className="text-xs text-slate-400">Uploading and extracting patient information</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600 font-medium">Saving ID data…</p>
+                  <p className="text-xs text-slate-400">Updating client demographics from scanned ID</p>
+                </>
+              )}
             </div>
           )}
 
