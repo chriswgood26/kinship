@@ -35,10 +35,11 @@ create table if not exists user_profiles (
   email text,
   first_name text,
   last_name text,
-  role text default 'clinician', -- admin, clinician, supervisor, billing, care_coordinator, receptionist, dsp
+  roles text[] default '{clinician}', -- admin, clinician, supervisor, billing, care_coordinator, receptionist
   title text,
   credentials text,
   npi text,
+  is_provider boolean default false, -- marks user as a selectable provider in encounters, appointments, etc.
   is_active boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -920,3 +921,10 @@ alter table comm_templates enable row level security;
 alter table comm_rules enable row level security;
 alter table comm_opt_outs enable row level security;
 alter table comm_delivery_log enable row level security;
+
+-- Migration: provider flag on user_profiles
+alter table user_profiles add column if not exists is_provider boolean default false;
+
+-- Multi-role migration: convert single role text to roles array
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS roles text[] DEFAULT '{clinician}';
+UPDATE user_profiles SET roles = ARRAY[role] WHERE roles IS NULL OR roles = '{}';
