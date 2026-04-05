@@ -9,25 +9,43 @@ export default async function AdminUsersPage() {
   const user = await currentUser();
   if (!user) redirect("/sign-in");
 
-  const { data: _profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id")
-    .eq("clerk_user_id", user.id)
-    .single();
-  const orgId = _profile?.organization_id || "34e600b3-beb0-440c-88c4-20032185e727";
-
-
-  const { data: profile } = await supabaseAdmin
-    .from("user_profiles")
-    .select("organization_id, role")
-    .eq("clerk_user_id", user.id)
-    .single();
-
-  const { data: users } = await supabaseAdmin
+  // Get or create user profile
+  let { data: profile } = await supabaseAdmin
     .from("user_profiles")
     .select("*")
-    .eq("organization_id", profile?.organization_id || orgId)
-    .order("last_name");
+    .eq("clerk_user_id", user.id)
+    .single();
 
-  return <UsersClient users={users || []} currentUserId={user.id} />;
+  if (!profile) {
+    // Auto-create profile from Clerk data
+    const { data: newProfile } = await supabaseAdmin
+      .from("user_profiles")
+      .upsert({
+        clerk_user_id: user.id,
+        first_name: user.firstName || "",
+        last_name: user.lastName || "",
+        email: user.emailAddresses?.[0]?.emailAddress || "",
+        role: "clinician",
+      }, { onConflict: "clerk_user_id" })
+      .select()
+      .single();
+    profile = newProfile;
+  }
+
+  const orgId = profile?.organization_id;
+
+  // If user has an org, show all org users; otherwise show just their own profile
+  let users;
+  if (orgId) {
+    const { data } = await supabaseAdmin
+      .from("user_profiles")
+      .select("*")
+      .eq("organization_id", orgId)
+      .order("last_name");
+    users = data || [];
+  } else {
+    users = profile ? [profile] : [];
+  }
+
+  return <UsersClient users={users} currentUserId={user.id} isAdmin={profile?.role === "admin"} />;
 }

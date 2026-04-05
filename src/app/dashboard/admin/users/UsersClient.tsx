@@ -37,9 +37,10 @@ const ROLE_PERMS: Record<string, string> = {
   receptionist: "Scheduling and patient check-in only",
 };
 
-export default function UsersClient({ users: initial, currentUserId }: {
+export default function UsersClient({ users: initial, currentUserId, isAdmin = false }: {
   users: UserProfile[];
   currentUserId: string;
+  isAdmin?: boolean;
 }) {
   const [users, setUsers] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
