@@ -19,6 +19,8 @@ interface Props {
   orgs: Org[];
   waitlist: WaitlistEntry[];
   userCountByOrg: Record<string, number>;
+  activeUserCountByOrg: Record<string, number>;
+  inactiveUserCountByOrg: Record<string, number>;
   mrr: number;
   arr: number;
 }
@@ -31,7 +33,7 @@ const PLAN_COLORS: Record<string, string> = {
   custom: "bg-amber-100 text-amber-700",
 };
 
-export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }: Props) {
+export default function AdminClient({ orgs, waitlist, userCountByOrg, activeUserCountByOrg, inactiveUserCountByOrg, mrr, arr }: Props) {
   const [tab, setTab] = useState<"orgs" | "waitlist" | "features" | "requests">("orgs");
   const [editingOrg, setEditingOrg] = useState<string | null>(null);
   const [editPlan, setEditPlan] = useState("");
@@ -88,7 +90,7 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div>
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -112,7 +114,7 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
             { label: "MRR", value: `$${mrr.toLocaleString()}`, color: "bg-emerald-50 border-emerald-100" },
             { label: "ARR", value: `$${arr.toLocaleString()}`, color: "bg-blue-50 border-blue-100" },
             { label: "Waitlist", value: waitlist.length, color: "bg-amber-50 border-amber-100" },
-            { label: "Total Users", value: Object.values(userCountByOrg).reduce((s, n) => s + n, 0), color: "bg-slate-50 border-slate-200" },
+            { label: "Total Users", value: `${Object.values(activeUserCountByOrg).reduce((s, n) => s + n, 0)} active`, color: "bg-slate-50 border-slate-200" },
           ].map(s => (
             <div key={s.label} className={`${s.color} border rounded-2xl p-4`}>
               <div className="text-2xl font-bold text-slate-900">{s.value}</div>
@@ -176,7 +178,7 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                 <tr className="border-b border-slate-100 bg-slate-50">
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Organization</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Plan</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Users</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Users (Active / Inactive)</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">MRR</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
@@ -188,6 +190,8 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                   const plan = (org.plan || "starter") as Plan;
                   const orgMrr = PLAN_PRICES[plan]?.monthly || 0;
                   const users = userCountByOrg[org.id] || 0;
+                  const activeUsers = activeUserCountByOrg[org.id] || 0;
+                  const inactiveUsers = inactiveUserCountByOrg[org.id] || 0;
                   return (
                     <>
                       <tr key={org.id} className={`hover:bg-slate-50 transition-colors ${!org.is_active ? "opacity-40" : ""}`}>
@@ -205,7 +209,10 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                             <div className="text-xs text-slate-400 mt-0.5">{(org.addons || []).join(", ")}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-slate-900 font-semibold">{users}</td>
+                        <td className="px-4 py-3.5 text-sm">
+                          <span className="font-semibold text-slate-900">{activeUsers}</span>
+                          <span className="text-slate-400 text-xs"> / {inactiveUsers}</span>
+                        </td>
                         <td className="px-4 py-3.5 text-sm font-bold text-emerald-700">${orgMrr}/mo</td>
                         <td className="px-4 py-3.5 text-xs text-slate-500 capitalize">{org.org_type?.replace("_", " ") || "—"}</td>
                         <td className="px-4 py-3.5 text-xs text-slate-400">{new Date(org.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>

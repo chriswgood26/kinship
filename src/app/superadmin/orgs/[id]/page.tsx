@@ -1,16 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import OrgDetailClient from "./OrgDetailClient";
 
 export const dynamic = "force-dynamic";
 
-const SUPERADMIN_IDS = process.env.SUPERADMIN_USER_IDS?.split(",") || [];
-
 export default async function OrgDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await currentUser();
-  if (!user || !SUPERADMIN_IDS.includes(user.id)) redirect("/dashboard");
-
   const { id } = await params;
 
   const [

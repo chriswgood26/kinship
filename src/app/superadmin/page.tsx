@@ -1,15 +1,9 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import AdminClient from "./AdminClient";
 
 export const dynamic = "force-dynamic";
 
-const SUPERADMIN_IDS = process.env.SUPERADMIN_USER_IDS?.split(",") || [];
-
 export default async function SuperAdminPage() {
-  const user = await currentUser();
-  if (!user || !SUPERADMIN_IDS.includes(user.id)) redirect("/dashboard");
 
   const [
     { data: orgs },
@@ -26,10 +20,19 @@ export default async function SuperAdminPage() {
   const mrr = (orgs || []).filter(o => o.is_active).reduce((s, o) => s + (PLAN_MRR[o.plan || "starter"] || 0), 0);
   const arr = mrr * 12;
 
-  // User counts per org
+  // Active and inactive user counts per org
   const userCountByOrg: Record<string, number> = {};
+  const activeUserCountByOrg: Record<string, number> = {};
+  const inactiveUserCountByOrg: Record<string, number> = {};
   (allUsers || []).forEach(u => {
-    if (u.organization_id) userCountByOrg[u.organization_id] = (userCountByOrg[u.organization_id] || 0) + 1;
+    if (u.organization_id) {
+      userCountByOrg[u.organization_id] = (userCountByOrg[u.organization_id] || 0) + 1;
+      if (u.is_active) {
+        activeUserCountByOrg[u.organization_id] = (activeUserCountByOrg[u.organization_id] || 0) + 1;
+      } else {
+        inactiveUserCountByOrg[u.organization_id] = (inactiveUserCountByOrg[u.organization_id] || 0) + 1;
+      }
+    }
   });
 
   return (
@@ -37,6 +40,8 @@ export default async function SuperAdminPage() {
       orgs={orgs || []}
       waitlist={waitlist || []}
       userCountByOrg={userCountByOrg}
+      activeUserCountByOrg={activeUserCountByOrg}
+      inactiveUserCountByOrg={inactiveUserCountByOrg}
       mrr={mrr}
       arr={arr}
     />

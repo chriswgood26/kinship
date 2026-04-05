@@ -1464,3 +1464,19 @@ create policy "org_opening_balances_update" on client_opening_balances
   for update using (organization_id = current_setting('app.current_org_id', true)::uuid);
 create policy "org_opening_balances_delete" on client_opening_balances
   for delete using (organization_id = current_setting('app.current_org_id', true)::uuid);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Kinship Admin Controls — per-org feature gating columns
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Superadmin can disable specific forms for an org (list of disabled form keys)
+alter table organizations add column if not exists disabled_forms text[] default '{}';
+
+-- Superadmin can disable specific modules for an org (list of disabled module keys)
+alter table organizations add column if not exists disabled_modules text[] default '{}';
+
+-- CCBHC reporting measures toggle (per org)
+alter table organizations add column if not exists ccbhc_reporting_enabled boolean default false;
+
+-- Stripe customer ID for billing integrations
+alter table organizations add column if not exists stripe_customer_id text;

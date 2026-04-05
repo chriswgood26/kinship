@@ -177,7 +177,7 @@ export default function OrgDetailClient({ org, users, feedback, lifetimeRevenue 
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div>
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {/* Back nav */}
         <div className="flex items-center gap-3">
