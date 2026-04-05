@@ -7,6 +7,7 @@ import { CSSRS } from "@/lib/cssrs";
 import { AUDIT, DAST10 } from "@/lib/substanceScreenings";
 import { ACE, getACESeverity } from "@/lib/aceScreening";
 import { SDOH, getSDOHSeverity } from "@/lib/sdoh";
+import { MOCA, MMSE, getCognitiveSeverity } from "@/lib/cognitiveScreenings";
 import OrgScreeningTrends from "@/components/OrgScreeningTrends";
 
 export const dynamic = "force-dynamic";
@@ -36,13 +37,15 @@ export default async function ScreeningsPage() {
   const aceHighRisk = screenings?.filter(s => s.tool === "ace" && (s.total_score || 0) >= 4).length || 0;
   const sdohCount = screenings?.filter(s => s.tool === "sdoh").length || 0;
   const sdohHighNeed = screenings?.filter(s => s.tool === "sdoh" && (s.total_score || 0) >= 6).length || 0;
+  const mocaCount = screenings?.filter(s => s.tool === "moca").length || 0;
+  const mmseCount = screenings?.filter(s => s.tool === "mmse").length || 0;
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Screenings</h1>
-          <p className="text-slate-500 text-sm mt-0.5">PHQ-9, GAD-7, AUDIT, DAST-10, ACE, SDOH, and C-SSRS standardized screening tools</p>
+          <p className="text-slate-500 text-sm mt-0.5">PHQ-9, GAD-7, MoCA, MMSE, AUDIT, DAST-10, ACE, SDOH, and C-SSRS standardized screening tools</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/screenings/phq9/new"
@@ -68,6 +71,14 @@ export default async function ScreeningsPage() {
           <Link href="/dashboard/screenings/sdoh/new"
             className="border border-teal-200 text-teal-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-50 text-sm">
             + SDOH
+          </Link>
+          <Link href="/dashboard/screenings/moca/new"
+            className="border border-indigo-200 text-indigo-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-indigo-50 text-sm">
+            + MoCA
+          </Link>
+          <Link href="/dashboard/screenings/mmse/new"
+            className="border border-purple-200 text-purple-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-purple-50 text-sm">
+            + MMSE
           </Link>
           <Link href="/dashboard/screenings/cssrs/new"
             className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 text-sm">
@@ -164,6 +175,52 @@ export default async function ScreeningsPage() {
           </div>
           <Link href="/dashboard/screenings/gad7/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-purple-500 text-white hover:bg-purple-600 transition-colors">
             Administer GAD-7 →
+          </Link>
+        </div>
+
+        {/* MoCA */}
+        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{MOCA.name}</div>
+              <div className="text-sm text-slate-500">{MOCA.fullName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{mocaCount}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">{MOCA.domains.length} domains · Max score {MOCA.maxScore} · MCI &amp; dementia screening</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {MOCA.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/moca/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors">
+            Administer MoCA →
+          </Link>
+        </div>
+
+        {/* MMSE */}
+        <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{MMSE.name}</div>
+              <div className="text-sm text-slate-500">{MMSE.fullName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{mmseCount}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">{MMSE.domains.length} domains · Max score {MMSE.maxScore} · Orientation, memory, language</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {MMSE.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/mmse/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-purple-600 text-white hover:bg-purple-500 transition-colors">
+            Administer MMSE →
           </Link>
         </div>
 
@@ -316,12 +373,16 @@ export default async function ScreeningsPage() {
                 const isDAST = s.tool === "dast10";
                 const isACE = s.tool === "ace";
                 const isSDOH = s.tool === "sdoh";
+                const isMoCA = s.tool === "moca";
+                const isMMSE = s.tool === "mmse";
+                const isCognitive = isMoCA || isMMSE;
                 const isSubstance = isAUDIT || isDAST;
-                const isStandard = !isCSSRS && !isSubstance && !isACE && !isSDOH;
+                const isStandard = !isCSSRS && !isSubstance && !isACE && !isSDOH && !isCognitive;
                 const tool = s.tool === "phq9" ? PHQ9 : GAD7;
                 const severity = isStandard ? getSeverity(s.total_score || 0, tool) : null;
                 const aceSeverity = isACE ? getACESeverity(s.total_score || 0) : null;
                 const sdohSeverity = isSDOH ? getSDOHSeverity(s.total_score || 0) : null;
+                const cognitiveSeverity = isCognitive ? getCognitiveSeverity(s.total_score || 0, isMoCA ? MOCA : MMSE) : null;
                 const hasSI = s.tool === "phq9" && (s.answers?.q9 || 0) > 0;
                 const toolBadgeClass: Record<string, string> = {
                   phq9: "bg-blue-100 text-blue-700",
@@ -331,9 +392,11 @@ export default async function ScreeningsPage() {
                   dast10: "bg-violet-100 text-violet-700",
                   ace: "bg-rose-100 text-rose-700",
                   sdoh: "bg-teal-100 text-teal-700",
+                  moca: "bg-indigo-100 text-indigo-700",
+                  mmse: "bg-purple-100 text-purple-700",
                 };
                 const toolMaxScore: Record<string, number> = {
-                  phq9: PHQ9.maxScore, gad7: GAD7.maxScore, audit: AUDIT.maxScore, dast10: DAST10.maxScore, ace: ACE.maxScore, sdoh: SDOH.maxScore,
+                  phq9: PHQ9.maxScore, gad7: GAD7.maxScore, audit: AUDIT.maxScore, dast10: DAST10.maxScore, ace: ACE.maxScore, sdoh: SDOH.maxScore, moca: MOCA.maxScore, mmse: MMSE.maxScore,
                 };
                 return (
                   <tr key={s.id} className="hover:bg-slate-50">
@@ -343,7 +406,7 @@ export default async function ScreeningsPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded ${toolBadgeClass[s.tool] || "bg-slate-100 text-slate-600"}`}>
-                        {s.tool === "dast10" ? "DAST-10" : s.tool === "sdoh" ? "SDOH" : s.tool?.toUpperCase()}
+                        {s.tool === "dast10" ? "DAST-10" : s.tool === "sdoh" ? "SDOH" : s.tool === "moca" ? "MoCA" : s.tool?.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
@@ -369,6 +432,10 @@ export default async function ScreeningsPage() {
                       ) : isSDOH ? (
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${sdohSeverity?.color}`}>
                           {sdohSeverity?.label || "—"}
+                        </span>
+                      ) : isCognitive ? (
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${cognitiveSeverity?.color}`}>
+                          {cognitiveSeverity?.label || "—"}
                         </span>
                       ) : (isCSSRS || isSubstance) ? (
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600`}>
