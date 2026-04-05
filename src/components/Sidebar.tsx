@@ -7,6 +7,7 @@ import InboxBadge from "@/components/InboxBadge";
 import CommunicationBadgeCount from "@/components/CommunicationBadgeCount";
 import ROIBadge from "@/components/ROIBadge";
 import type { Terminology } from "@/lib/terminology";
+import { PLAN_LABELS, type Plan } from "@/lib/plans";
 
 interface NavItem { href: string; label: string; icon: string; exact?: boolean; inboxBadge?: boolean; roles?: string[]; }
 interface NavSection { label: string | null; icon?: string; items: NavItem[]; defaultOpen?: boolean; roles?: string[]; }
@@ -96,7 +97,18 @@ const navSections: NavSection[] = [
   },
 ];
 
-export default function Sidebar({ terminology, userRole = "clinician" }: { terminology?: Terminology; userRole?: string }) {
+const PLAN_BADGE_COLORS: Record<Plan, string> = {
+  starter:  "bg-slate-100 text-slate-600",
+  growth:   "bg-teal-50 text-teal-700",
+  practice: "bg-violet-50 text-violet-700",
+  agency:   "bg-blue-50 text-blue-700",
+  custom:   "bg-amber-50 text-amber-700",
+};
+
+export default function Sidebar({ terminology, userRole = "clinician", plan = "starter" }: { terminology?: Terminology; userRole?: string; plan?: string }) {
+  const planKey = (plan || "starter") as Plan;
+  const planLabel = PLAN_LABELS[planKey] || "Starter";
+  const planBadgeColor = PLAN_BADGE_COLORS[planKey] || PLAN_BADGE_COLORS.starter;
   const [localTerm, setLocalTerm] = useState<Terminology | undefined>(terminology);
   const pathname = usePathname();
 

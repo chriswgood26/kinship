@@ -30,7 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: org } = await supabaseAdmin
     .from("organizations")
-    .select("client_terminology")
+    .select("client_terminology, plan")
     .eq("id", orgId)
     .single();
 
@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <UpdateBanner />
       <SessionTimeout />
       <div className="flex h-screen bg-slate-50 overflow-hidden pt-[3px]">
-        <Sidebar terminology={terminology} userRole={profile?.role || "clinician"} />
+        <Sidebar terminology={terminology} userRole={profile?.role || "clinician"} plan={org?.plan || "starter"} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopBar user={{ firstName: user.firstName, lastName: user.lastName, email: user.emailAddresses[0]?.emailAddress, role: profile?.role, title: profile?.title }} />
           <main className="flex-1 overflow-auto p-6">
