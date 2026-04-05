@@ -90,7 +90,7 @@ export default function BedManagementClient({ facilities, beds, patients }: {
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
           <div className="text-4xl mb-3">🏥</div>
           <p className="font-semibold text-slate-900 mb-1">No facilities configured</p>
-          <p className="text-slate-500 text-sm">Run the seed SQL to add demo facilities and beds</p>
+          <p className="text-slate-500 text-sm">Contact your administrator to configure residential facilities and beds</p>
         </div>
       ) : (
         <>

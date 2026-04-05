@@ -62,10 +62,10 @@ export default async function CCBHCReportPage() {
       id: "CCO-2",
       name: "Crisis Response Time",
       description: "Percentage of crisis contacts receiving same-day response",
-      value: "100%",
+      value: "N/A",
       target: "100%",
-      status: "passing",
-      detail: "All 4 crisis contacts this quarter received same-day response",
+      status: "pending",
+      detail: "Crisis contact tracking not yet integrated",
     },
     {
       id: "CCO-3",
@@ -107,15 +107,18 @@ export default async function CCBHCReportPage() {
         detail: `${uniquePatientsScreened} of ${activePatients || 0} active clients have vitals documented in the past year`,
       };
     })(),
-    {
-      id: "CCO-7",
-      name: "Substance Use Screening",
-      description: "Percentage of clients screened for substance use (AUDIT/DAST)",
-      value: "91%",
-      target: "≥ 85%",
-      status: "passing",
-      detail: "Screening completed at intake for most patients",
-    },
+    (() => {
+      // TODO: query actual screening completion rate from screenings table
+      return {
+        id: "CCO-7",
+        name: "Substance Use Screening",
+        description: "Percentage of clients screened for substance use (AUDIT/DAST)",
+        value: "N/A",
+        target: "≥ 85%",
+        status: "pending" as const,
+        detail: "Screening completion rate not yet calculated",
+      };
+    })(),
     {
       id: "CCO-8",
       name: "Consumer Satisfaction",
@@ -205,7 +208,7 @@ export default async function CCBHCReportPage() {
       </div>
 
       <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 text-xs text-slate-400">
-        CCBHC measures based on SAMHSA criteria. Some metrics use live data; others use representative estimates for POC demonstration. Full integration requires connection to state reporting systems.
+        CCBHC measures based on SAMHSA criteria. Metrics marked N/A require additional integration with state reporting systems or data sources not yet connected.
       </div>
     </div>
   );

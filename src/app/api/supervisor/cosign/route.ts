@@ -10,12 +10,15 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
-    .select("role, first_name, last_name, credentials")
+    .select("id, roles, role, first_name, last_name, credentials")
     .eq("clerk_user_id", userId)
     .single();
 
-  // Allow supervisors, admins, and clinicians with supervisor access
-  // Removed strict role check for demo flexibility
+  // Only supervisors and admins may co-sign notes
+  const userRoles: string[] = profile?.roles || (profile?.role ? [profile.role] : []);
+  if (!userRoles.some((r: string) => ["supervisor", "admin"].includes(r))) {
+    return NextResponse.json({ error: "Forbidden — supervisor or admin role required" }, { status: 403 });
+  }
 
   const body = await req.json();
   const { note_ids, supervisor_name, review_notes } = body;
