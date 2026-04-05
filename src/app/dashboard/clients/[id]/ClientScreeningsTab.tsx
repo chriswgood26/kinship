@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import ScreeningTrendsChart from "@/components/ScreeningTrendsChart";
+import { getSDOHSeverity } from "@/lib/sdoh";
 
 interface Screening {
   id: string;
@@ -10,7 +11,7 @@ interface Screening {
   total_score: number | null;
   severity_label: string | null;
   administered_at: string;
-  answers?: Record<string, number>;
+  answers?: Record<string, number | boolean>;
   notes?: string | null;
 }
 
@@ -20,10 +21,12 @@ const TOOL_BADGE: Record<string, string> = {
   cssrs: "bg-red-100 text-red-700",
   audit: "bg-amber-100 text-amber-700",
   dast10: "bg-violet-100 text-violet-700",
+  ace: "bg-rose-100 text-rose-700",
+  sdoh: "bg-teal-100 text-teal-700",
 };
 
 const TOOL_MAX: Record<string, number> = {
-  phq9: 27, gad7: 21, audit: 40, dast10: 10,
+  phq9: 27, gad7: 21, audit: 40, dast10: 10, ace: 10, sdoh: 10,
 };
 
 function formatDate(iso: string) {
@@ -68,6 +71,14 @@ export default function ClientScreeningsTab({ clientId, clientName }: Props) {
           className="border border-violet-200 text-violet-700 px-4 py-2 rounded-xl font-semibold hover:bg-violet-50 text-sm">
           + DAST-10
         </Link>
+        <Link href={`/dashboard/screenings/ace/new?client_id=${clientId}`}
+          className="border border-rose-200 text-rose-700 px-4 py-2 rounded-xl font-semibold hover:bg-rose-50 text-sm">
+          + ACE
+        </Link>
+        <Link href={`/dashboard/screenings/sdoh/new?client_id=${clientId}`}
+          className="border border-teal-200 text-teal-700 px-4 py-2 rounded-xl font-semibold hover:bg-teal-50 text-sm">
+          + SDOH
+        </Link>
         <Link href={`/dashboard/screenings/cssrs/new?client_id=${clientId}`}
           className="bg-red-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-red-400 text-sm">
           + C-SSRS
@@ -78,13 +89,26 @@ export default function ClientScreeningsTab({ clientId, clientName }: Props) {
       <ScreeningTrendsChart clientId={clientId} clientName={clientName} />
 
       {/* SI alert */}
-      {screenings.some(s => s.tool === "phq9" && (s.answers?.q9 ?? 0) > 0) && (
+      {screenings.some(s => s.tool === "phq9" && ((s.answers?.q9 as number) ?? 0) > 0) && (
         <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
           <span className="text-2xl">🚨</span>
           <div>
             <div className="font-semibold text-red-800">Suicidal ideation flagged</div>
             <div className="text-sm text-red-600">
-              {screenings.filter(s => s.tool === "phq9" && (s.answers?.q9 ?? 0) > 0).length} PHQ-9 screening(s) have a positive response on question 9 — review immediately
+              {screenings.filter(s => s.tool === "phq9" && ((s.answers?.q9 as number) ?? 0) > 0).length} PHQ-9 screening(s) have a positive response on question 9 — review immediately
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SDOH high-need alert */}
+      {screenings.some(s => s.tool === "sdoh" && (s.total_score ?? 0) >= 6) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+          <span className="text-2xl">⚑</span>
+          <div>
+            <div className="font-semibold text-amber-800">High social need burden identified</div>
+            <div className="text-sm text-amber-600">
+              {screenings.filter(s => s.tool === "sdoh" && (s.total_score ?? 0) >= 6).length} SDOH screening(s) show 6+ unmet needs — social work consultation and community navigation recommended
             </div>
           </div>
         </div>
@@ -113,7 +137,9 @@ export default function ClientScreeningsTab({ clientId, clientName }: Props) {
             <tbody className="divide-y divide-slate-50">
               {screenings.map(s => {
                 const isCSSRS = s.tool === "cssrs";
-                const hasSI = s.tool === "phq9" && (s.answers?.q9 ?? 0) > 0;
+                const isSDOH = s.tool === "sdoh";
+                const hasSI = s.tool === "phq9" && ((s.answers?.q9 as number) ?? 0) > 0;
+                const sdohSeverity = isSDOH ? getSDOHSeverity(s.total_score ?? 0) : null;
                 return (
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-5 py-3.5">
@@ -135,9 +161,15 @@ export default function ClientScreeningsTab({ clientId, clientName }: Props) {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">
-                        {s.severity_label || "—"}
-                      </span>
+                      {isSDOH ? (
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${sdohSeverity?.color ?? "bg-slate-100 text-slate-600"}`}>
+                          {sdohSeverity?.label || s.severity_label || "—"}
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">
+                          {s.severity_label || "—"}
+                        </span>
+                      )}
                       {hasSI && <span className="ml-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">🚨 SI</span>}
                     </td>
                     <td className="px-4 py-3.5">

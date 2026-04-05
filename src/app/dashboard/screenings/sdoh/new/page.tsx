@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SDOH, getSDOHScore, getSDOHSeverity } from "@/lib/sdoh";
 
@@ -9,11 +9,26 @@ interface Client { id: string; first_name: string; last_name: string; mrn: strin
 
 function SDOHForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefilledClientId = searchParams.get("client_id");
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState("");
   const [answers, setAnswers] = useState<Record<string, boolean | null>>({});
   const [form, setForm] = useState({ client_id: "", patient_name: "", administered_by: "", notes: "" });
+
+  // Pre-populate client from URL param
+  useEffect(() => {
+    if (prefilledClientId) {
+      fetch(`/api/clients/${prefilledClientId}`, { credentials: "include" })
+        .then(r => r.json())
+        .then(d => {
+          if (d.client) {
+            setForm(f => ({ ...f, client_id: d.client.id, patient_name: `${d.client.last_name}, ${d.client.first_name}` }));
+          }
+        });
+    }
+  }, [prefilledClientId]);
 
   useEffect(() => {
     if (clientSearch.length >= 2) {
