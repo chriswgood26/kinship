@@ -9,6 +9,7 @@ interface OrgData {
   id: string;
   name: string | null;
   plan: string | null;
+  requested_plan?: string | null;
   addons: string[] | null;
   is_active: boolean;
   org_type: string | null;
@@ -293,6 +294,47 @@ export default function OrgDetailClient({ org, users, feedback, lifetimeRevenue 
         {/* OVERVIEW TAB */}
         {tab === "overview" && (
           <div className="space-y-4">
+            {/* Pending plan change request banner */}
+            {org.requested_plan && org.requested_plan !== org.plan && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-amber-600 font-bold text-sm">📋 Pending Plan Change Request</span>
+                    </div>
+                    <p className="text-sm text-amber-800">
+                      This organization has requested to change their plan from{" "}
+                      <span className="font-semibold">{PLAN_LABELS[(org.plan || "starter") as Plan]}</span>
+                      {" "}to{" "}
+                      <span className="font-semibold">{PLAN_LABELS[org.requested_plan as Plan] || org.requested_plan}</span>.
+                    </p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      Click &ldquo;Approve&rdquo; to apply the change, or &ldquo;Dismiss&rdquo; to cancel the request without changing the plan.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        setEditPlan(org.requested_plan as string);
+                        save({ plan: org.requested_plan, requested_plan: null }, `Plan changed to ${PLAN_LABELS[org.requested_plan as Plan] || org.requested_plan}`);
+                      }}
+                      disabled={saving}
+                      className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-400 disabled:opacity-50"
+                    >
+                      {saving ? "Applying…" : "✓ Approve"}
+                    </button>
+                    <button
+                      onClick={() => save({ requested_plan: null }, "Plan request dismissed")}
+                      disabled={saving}
+                      className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Plan management */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
               <h2 className="font-semibold text-slate-900">Plan & Add-ons</h2>

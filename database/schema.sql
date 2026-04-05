@@ -19,9 +19,13 @@ create table if not exists organizations (
   client_terminology text default 'client', -- client, patient, individual, recipient, resident
   is_active boolean default true,
   plan text default 'starter', -- starter, growth, enterprise
+  requested_plan text, -- plan tier requested by org admin, pending superadmin approval
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Migration: add requested_plan column if not exists
+-- alter table organizations add column if not exists requested_plan text;
 
 -- User profiles
 create table if not exists user_profiles (

@@ -16,7 +16,7 @@ export default async function SuperAdminPage() {
     { data: waitlist },
     { data: allUsers },
   ] = await Promise.all([
-    supabaseAdmin.from("organizations").select("*, user_profiles(count)").order("created_at", { ascending: false }),
+    supabaseAdmin.from("organizations").select("id, name, plan, requested_plan, addons, is_active, org_type, created_at, client_terminology, user_profiles(count)").order("created_at", { ascending: false }),
     supabaseAdmin.from("waitlist").select("*").order("created_at", { ascending: false }),
     supabaseAdmin.from("user_profiles").select("organization_id, is_active"),
   ]);

@@ -62,6 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const ALLOWED = [
     "plan", "addons", "is_active", "name",
     "disabled_forms", "disabled_modules", "ccbhc_reporting_enabled",
+    "requested_plan",
   ];
   const safeBody = Object.fromEntries(
     Object.entries(body).filter(([k]) => ALLOWED.includes(k))

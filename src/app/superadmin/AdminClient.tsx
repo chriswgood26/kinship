@@ -6,7 +6,7 @@ import Link from "next/link";
 import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES, type Plan } from "@/lib/plans";
 
 interface Org {
-  id: string; name: string | null; plan: string | null; is_active: boolean;
+  id: string; name: string | null; plan: string | null; requested_plan?: string | null; is_active: boolean;
   client_terminology: string | null; org_type: string | null;
   created_at: string; addons?: string[];
 }
@@ -32,13 +32,17 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }: Props) {
-  const [tab, setTab] = useState<"orgs" | "waitlist" | "features">("orgs");
+  const [tab, setTab] = useState<"orgs" | "waitlist" | "features" | "requests">("orgs");
   const [editingOrg, setEditingOrg] = useState<string | null>(null);
   const [editPlan, setEditPlan] = useState("");
   const [editAddons, setEditAddons] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [approvingOrg, setApprovingOrg] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
   const router = useRouter();
+
+  // Orgs with pending plan change requests
+  const pendingRequests = orgs.filter(o => o.requested_plan && o.requested_plan !== o.plan);
 
   async function savePlan(orgId: string) {
     setSaving(true);
@@ -48,6 +52,30 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
     });
     setSaving(false); setEditingOrg(null);
     setSuccess("Plan updated"); router.refresh();
+    setTimeout(() => setSuccess(""), 3000);
+  }
+
+  async function approvePlanRequest(orgId: string, newPlan: string) {
+    setApprovingOrg(orgId);
+    await fetch(`/api/superadmin/orgs/${orgId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ plan: newPlan, requested_plan: null }),
+    });
+    setApprovingOrg(null);
+    setSuccess(`Plan changed to ${PLAN_LABELS[newPlan as Plan] || newPlan}`);
+    router.refresh();
+    setTimeout(() => setSuccess(""), 3000);
+  }
+
+  async function denyPlanRequest(orgId: string) {
+    setApprovingOrg(orgId);
+    await fetch(`/api/superadmin/orgs/${orgId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ requested_plan: null }),
+    });
+    setApprovingOrg(null);
+    setSuccess("Plan request dismissed");
+    router.refresh();
     setTimeout(() => setSuccess(""), 3000);
   }
 
@@ -112,11 +140,29 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
           </div>
         </div>
 
+        {/* Plan Requests Banner */}
+        {pendingRequests.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-amber-800 font-medium">
+              <span className="text-lg">📋</span>
+              <span>{pendingRequests.length} pending plan change {pendingRequests.length === 1 ? "request" : "requests"} from customers</span>
+            </div>
+            <button onClick={() => setTab("requests")} className="text-xs font-semibold text-amber-700 border border-amber-300 px-3 py-1 rounded-lg hover:bg-amber-100">
+              Review Requests →
+            </button>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
-          {[["orgs", "Organizations"], ["waitlist", `Waitlist (${waitlist.length})`], ["features", "Feature Matrix"]].map(([key, label]) => (
+          {[
+            ["orgs", "Organizations"],
+            ["requests", `Plan Requests${pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ""}`],
+            ["waitlist", `Waitlist (${waitlist.length})`],
+            ["features", "Feature Matrix"],
+          ].map(([key, label]) => (
             <button key={key} onClick={() => setTab(key as typeof tab)}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${tab === key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${tab === key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"} ${key === "requests" && pendingRequests.length > 0 ? "text-amber-600" : ""}`}>
               {label}
             </button>
           ))}
@@ -216,6 +262,85 @@ export default function AdminClient({ orgs, waitlist, userCountByOrg, mrr, arr }
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* PLAN REQUESTS TAB */}
+        {tab === "requests" && (
+          <div className="space-y-4">
+            {pendingRequests.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-400">
+                <div className="text-4xl mb-3">✅</div>
+                <div className="text-sm font-medium">No pending plan change requests</div>
+                <div className="text-xs mt-1">When a customer requests a plan change, it will appear here for review.</div>
+              </div>
+            ) : (
+              pendingRequests.map(org => {
+                const currentPlan = (org.plan || "starter") as Plan;
+                const requestedPlan = org.requested_plan as Plan;
+                const isUpgrade = (["starter", "growth", "practice", "agency", "custom"] as Plan[]).indexOf(requestedPlan) >
+                  (["starter", "growth", "practice", "agency", "custom"] as Plan[]).indexOf(currentPlan);
+                return (
+                  <div key={org.id} className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
+                    <div className="bg-amber-50 px-5 py-3 border-b border-amber-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900">{org.name || "Unnamed Org"}</span>
+                        <span className="text-xs font-mono text-slate-400">{org.id.slice(0, 8)}…</span>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isUpgrade ? "bg-teal-100 text-teal-700" : "bg-slate-100 text-slate-600"}`}>
+                        {isUpgrade ? "⬆ Upgrade Request" : "⬇ Downgrade Request"}
+                      </span>
+                    </div>
+                    <div className="px-5 py-4">
+                      <div className="flex items-center gap-6">
+                        <div className="flex-1">
+                          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Current Plan</div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm px-2.5 py-1 rounded-full font-semibold capitalize ${PLAN_COLORS[currentPlan]}`}>
+                              {PLAN_LABELS[currentPlan]}
+                            </span>
+                            <span className="text-xs text-slate-400">${PLAN_PRICES[currentPlan]?.monthly || 0}/mo</span>
+                          </div>
+                        </div>
+
+                        <div className="text-xl text-slate-300">→</div>
+
+                        <div className="flex-1">
+                          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Requested Plan</div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm px-2.5 py-1 rounded-full font-semibold capitalize ${PLAN_COLORS[requestedPlan]}`}>
+                              {PLAN_LABELS[requestedPlan]}
+                            </span>
+                            <span className="text-xs text-slate-400">${PLAN_PRICES[requestedPlan]?.monthly || 0}/mo</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => approvePlanRequest(org.id, requestedPlan)}
+                            disabled={approvingOrg === org.id}
+                            className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-400 disabled:opacity-50"
+                          >
+                            {approvingOrg === org.id ? "Applying…" : "✓ Approve"}
+                          </button>
+                          <button
+                            onClick={() => denyPlanRequest(org.id)}
+                            disabled={approvingOrg === org.id}
+                            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-200 disabled:opacity-50"
+                          >
+                            Dismiss
+                          </button>
+                          <Link href={`/superadmin/orgs/${org.id}`}
+                            className="text-xs text-teal-600 font-medium hover:text-teal-700 border border-teal-200 px-3 py-2 rounded-xl">
+                            View Org
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
 

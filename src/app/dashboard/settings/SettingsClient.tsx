@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PLAN_FEATURES, PLAN_PRICES, PLAN_LABELS, type Plan } from "@/lib/plans";
 
-interface Org { id: string; name: string | null; npi: string | null; phone: string | null; address_line1: string | null; city: string | null; state: string | null; zip: string | null; client_terminology: string | null; org_type: string | null; referral_due_days: number | null; referral_due_business_days: boolean | null; plan?: string | null; addons?: string[] | null; }
+interface Org { id: string; name: string | null; npi: string | null; phone: string | null; address_line1: string | null; city: string | null; state: string | null; zip: string | null; client_terminology: string | null; org_type: string | null; referral_due_days: number | null; referral_due_business_days: boolean | null; plan?: string | null; addons?: string[] | null; requested_plan?: string | null; }
 
 const TERMS = ["client", "patient", "individual", "recipient", "resident", "consumer", "member"];
 const ORG_TYPES = ["behavioral_health", "developmental_disabilities", "substance_use", "residential", "cmhc", "outpatient"];
@@ -31,6 +31,10 @@ export default function SettingsClient({ org, userRole = "clinician" }: { org: O
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [planRequestPending, setPlanRequestPending] = useState(!!org?.requested_plan);
+  const [pendingPlan, setPendingPlan] = useState<Plan | null>((org?.requested_plan as Plan) || null);
+  const [planRequestSaving, setPlanRequestSaving] = useState(false);
+  const [planRequestMsg, setPlanRequestMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -55,6 +59,47 @@ export default function SettingsClient({ org, userRole = "clinician" }: { org: O
     });
     setSaving(false); setSaved(true); setEditing(false); router.refresh();
     setTimeout(() => setSaved(false), 3000);
+  }
+
+  async function requestPlanChange(plan: Plan) {
+    setPlanRequestSaving(true);
+    setPlanRequestMsg(null);
+    try {
+      const res = await fetch("/api/settings/request-plan", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ requested_plan: plan }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPlanRequestMsg({ type: "error", text: data.error || "Failed to submit request" });
+      } else {
+        setPlanRequestPending(true);
+        setPendingPlan(plan);
+        setPlanRequestMsg({ type: "success", text: "Plan change request submitted! Our team will review and apply it shortly." });
+        router.refresh();
+      }
+    } catch {
+      setPlanRequestMsg({ type: "error", text: "Network error. Please try again." });
+    } finally {
+      setPlanRequestSaving(false);
+    }
+  }
+
+  async function cancelPlanRequest() {
+    setPlanRequestSaving(true);
+    try {
+      await fetch("/api/settings/request-plan", {
+        method: "DELETE", credentials: "include",
+      });
+      setPlanRequestPending(false);
+      setPendingPlan(null);
+      setPlanRequestMsg({ type: "success", text: "Plan change request cancelled." });
+      router.refresh();
+    } catch {
+      setPlanRequestMsg({ type: "error", text: "Failed to cancel request." });
+    } finally {
+      setPlanRequestSaving(false);
+    }
   }
 
   const inputClass = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500";
@@ -179,20 +224,53 @@ export default function SettingsClient({ org, userRole = "clinician" }: { org: O
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 space-y-5">
+          {/* Pending plan request status */}
+          {planRequestPending && pendingPlan && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-amber-800">
+                  📋 Plan change requested: <span className={`px-1.5 py-0.5 rounded text-xs ${PLAN_COLORS[pendingPlan].badge}`}>{PLAN_LABELS[pendingPlan]}</span>
+                </div>
+                <div className="text-xs text-amber-600 mt-0.5">
+                  Our team is reviewing your request and will apply the change shortly.
+                </div>
+              </div>
+              <button
+                onClick={cancelPlanRequest}
+                disabled={planRequestSaving}
+                className="text-xs text-amber-700 border border-amber-300 px-3 py-1.5 rounded-lg hover:bg-amber-100 disabled:opacity-50 shrink-0"
+              >
+                Cancel Request
+              </button>
+            </div>
+          )}
+
+          {planRequestMsg && (
+            <div className={`rounded-xl px-4 py-3 text-sm font-medium ${planRequestMsg.type === "success" ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-red-50 border border-red-200 text-red-600"}`}>
+              {planRequestMsg.type === "success" ? "✅" : "❌"} {planRequestMsg.text}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {PLAN_ORDER.map((plan) => {
               const isCurrent = plan === currentPlan;
+              const isPendingRequest = plan === pendingPlan && planRequestPending;
               const price = PLAN_PRICES[plan];
               const colors = PLAN_COLORS[plan];
               const isDowngrade = PLAN_ORDER.indexOf(plan) < PLAN_ORDER.indexOf(currentPlan);
 
               return (
                 <div key={plan}
-                  className={`relative rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all ${colors.border} ${isCurrent ? "ring-2 ring-offset-1 ring-teal-400" : ""}`}>
+                  className={`relative rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all ${colors.border} ${isCurrent ? "ring-2 ring-offset-1 ring-teal-400" : ""} ${isPendingRequest ? "ring-2 ring-offset-1 ring-amber-400" : ""}`}>
                   {isCurrent && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <span className="bg-teal-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase">Current</span>
+                    </div>
+                  )}
+                  {isPendingRequest && !isCurrent && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase">Requested</span>
                     </div>
                   )}
 
@@ -229,20 +307,35 @@ export default function SettingsClient({ org, userRole = "clinician" }: { org: O
                   {userRole === "admin" && (
                     isCurrent ? (
                       <div className="text-center text-xs text-slate-400 py-1.5 font-medium">Active Plan</div>
+                    ) : isPendingRequest ? (
+                      <div className="text-center text-xs text-amber-600 py-1.5 font-medium border border-amber-200 rounded-xl bg-amber-50">
+                        Request Pending…
+                      </div>
                     ) : plan === "custom" ? (
                       <a href="mailto:sales@kinshipehr.com"
                         className={`w-full text-center text-xs font-semibold py-2 rounded-xl transition-colors ${colors.btn}`}>
                         Contact Sales
                       </a>
-                    ) : isDowngrade ? (
+                    ) : planRequestPending ? (
                       <button disabled className="w-full text-center text-xs font-medium py-2 rounded-xl bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed">
-                        Downgrade
+                        {isDowngrade ? "Downgrade" : "Upgrade"}
+                      </button>
+                    ) : isDowngrade ? (
+                      <button
+                        onClick={() => requestPlanChange(plan)}
+                        disabled={planRequestSaving}
+                        className="w-full text-center text-xs font-medium py-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        {planRequestSaving ? "Requesting…" : "Request Downgrade"}
                       </button>
                     ) : (
-                      <a href="mailto:sales@kinshipehr.com?subject=Upgrade%20to%20{plan}"
-                        className={`w-full text-center text-xs font-semibold py-2 rounded-xl transition-colors ${colors.btn}`}>
-                        Upgrade
-                      </a>
+                      <button
+                        onClick={() => requestPlanChange(plan)}
+                        disabled={planRequestSaving}
+                        className={`w-full text-center text-xs font-semibold py-2 rounded-xl transition-colors disabled:opacity-50 ${colors.btn}`}
+                      >
+                        {planRequestSaving ? "Requesting…" : "Request Upgrade"}
+                      </button>
                     )
                   )}
                 </div>
@@ -250,8 +343,9 @@ export default function SettingsClient({ org, userRole = "clinician" }: { org: O
             })}
           </div>
 
-          <p className="mt-4 text-xs text-slate-400 text-center">
-            Need help choosing a plan? <a href="mailto:sales@kinshipehr.com" className="text-teal-600 hover:underline">Contact our team →</a>
+          <p className="text-xs text-slate-400 text-center">
+            Plan changes are reviewed and applied by our team within 1 business day.{" "}
+            <a href="mailto:sales@kinshipehr.com" className="text-teal-600 hover:underline">Contact us with questions →</a>
           </p>
         </div>
       </div>
