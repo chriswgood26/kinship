@@ -1513,3 +1513,75 @@ alter table organizations add column if not exists ccbhc_reporting_enabled boole
 
 -- Stripe customer ID for billing integrations
 alter table organizations add column if not exists stripe_customer_id text;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Custom Clinical Note Templates (org-configurable)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create table if not exists note_templates (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  name text not null,
+  description text,
+  -- sections: [{key, label, placeholder}]
+  sections jsonb not null default '[]',
+  is_default boolean default false,
+  is_active boolean default true,
+  sort_order int default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_note_templates_org on note_templates(organization_id) where is_active = true;
+
+alter table note_templates enable row level security;
+
+create policy "org_note_templates_select" on note_templates
+  for select using (organization_id = auth_org_id());
+create policy "org_note_templates_insert" on note_templates
+  for insert with check (organization_id = auth_org_id());
+create policy "org_note_templates_update" on note_templates
+  for update using (organization_id = auth_org_id());
+create policy "org_note_templates_delete" on note_templates
+  for delete using (organization_id = auth_org_id());
+
+-- Add template tracking columns to clinical_notes
+alter table clinical_notes add column if not exists template_id uuid references note_templates(id) on delete set null;
+alter table clinical_notes add column if not exists custom_content jsonb;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Portal Self-Registration Requests
+-- Patients submit these via the public /register/[orgSlug] page.
+-- Staff review in the portal management dashboard and approve or reject.
+-- On approval a portal_users record is created and an invite email is sent.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create table if not exists portal_registration_requests (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  -- Applicant info (self-reported)
+  first_name text not null,
+  last_name text not null,
+  email text not null,
+  phone text,
+  date_of_birth date,
+  relationship text default 'self',  -- self, parent, guardian, caregiver, authorized_rep, other
+  patient_name text,                  -- name of the patient if relationship != self
+  message text,                       -- freeform reason / additional info
+  -- Review state
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  reviewed_by text,                   -- clerk_user_id of staff who reviewed
+  reviewed_at timestamptz,
+  rejection_reason text,
+  -- Linkage (filled in on approval)
+  portal_user_id uuid references portal_users(id) on delete set null,
+  client_id uuid references clients(id) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_portal_reg_org on portal_registration_requests(organization_id, status);
+create index if not exists idx_portal_reg_email on portal_registration_requests(organization_id, email);
+
+-- Migration: add table if upgrading from earlier schema
+-- (safe to re-run — create table if not exists already guards it)
