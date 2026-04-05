@@ -6,12 +6,14 @@ import { getOrgId } from "@/lib/getOrgId";
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
   const patientId = req.nextUrl.searchParams.get("patient_id");
   if (!patientId) return NextResponse.json({ error: "client_id required" }, { status: 400 });
   const { data } = await supabaseAdmin
     .from("patient_problems")
     .select("*")
     .eq("client_id", patientId)
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
   return NextResponse.json({ problems: data || [] });
 }

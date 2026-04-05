@@ -12,6 +12,8 @@ import ClientDocumentsTab from "./ClientDocumentsTab";
 import ClientAllergiesTab from "./ClientAllergiesTab";
 import ClientScreeningsTab from "./ClientScreeningsTab";
 import ClientOpeningBalancesTab from "./ClientOpeningBalancesTab";
+import ClientProblemListTab from "./ClientProblemListTab";
+import ProblemListWidget from "./ProblemListWidget";
 import AllergyWidget from "./AllergyWidget";
 import HousingStatusWidget from "./HousingStatusWidget";
 import ClientProgramRequirementsWidget from "./ClientProgramRequirementsWidget";
@@ -98,6 +100,11 @@ export default async function ClientDetailPage({
 
       {/* Tab navigation */}
       <ClientTabNav clientId={id} activeTab={activeTab} unreadMessageCount={unreadMessageCount} />
+
+      {/* Problem List tab */}
+      {activeTab === "problems" && (
+        <ClientProblemListTab clientId={id} />
+      )}
 
       {/* Screenings tab */}
       {activeTab === "screenings" && (
@@ -226,6 +233,18 @@ export default async function ClientDetailPage({
                   </>
                 )}
               </dl>
+            </div>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="client-problems"
+            title="Problem List"
+            headerRight={
+              <a href={`/dashboard/clients/${id}?tab=problems`} className="text-xs text-teal-600 font-medium hover:text-teal-700">View all</a>
+            }
+          >
+            <div className="p-5">
+              <ProblemListWidget clientId={id} />
             </div>
           </CollapsibleCard>
 
