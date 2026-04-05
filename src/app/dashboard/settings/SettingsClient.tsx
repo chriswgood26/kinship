@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface Org { id: string; name: string | null; npi: string | null; phone: string | null; address_line1: string | null; city: string | null; state: string | null; zip: string | null; client_terminology: string | null; org_type: string | null; }
+interface Org { id: string; name: string | null; npi: string | null; phone: string | null; address_line1: string | null; city: string | null; state: string | null; zip: string | null; client_terminology: string | null; org_type: string | null; referral_due_days: number | null; referral_due_business_days: boolean | null; }
 
 const TERMS = ["client", "patient", "individual", "recipient", "resident", "consumer", "member"];
 const ORG_TYPES = ["behavioral_health", "developmental_disabilities", "substance_use", "residential", "cmhc", "outpatient"];
@@ -24,6 +24,8 @@ export default function SettingsClient({ org }: { org: Org | null }) {
     zip: org?.zip || "",
     client_terminology: org?.client_terminology || "client",
     org_type: org?.org_type || "behavioral_health",
+    referral_due_days: org?.referral_due_days?.toString() || "3",
+    referral_due_business_days: org?.referral_due_business_days !== false,
   });
 
   async function save() {
@@ -46,6 +48,7 @@ export default function SettingsClient({ org }: { org: Org | null }) {
     { label: "Address", value: [form.address_line1, form.city && `${form.city}, ${form.state} ${form.zip}`].filter(Boolean).join(", ") },
     { label: "Client Terminology", value: form.client_terminology?.charAt(0).toUpperCase() + (form.client_terminology?.slice(1) || "") },
     { label: "Organization Type", value: form.org_type?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) },
+    { label: "Referral Due Date Default", value: `${form.referral_due_days} ${form.referral_due_business_days ? "business" : "calendar"} days` },
   ];
 
   return (
@@ -94,6 +97,22 @@ export default function SettingsClient({ org }: { org: Org | null }) {
                     {t}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Referral Due Date Default</label>
+              <div className="flex items-center gap-3">
+                <input type="number" min="1" max="90" value={form.referral_due_days}
+                  onChange={e => setForm(f => ({ ...f, referral_due_days: e.target.value }))}
+                  className={inputClass + " w-20"} />
+                <select value={form.referral_due_business_days ? "business" : "calendar"}
+                  onChange={e => setForm(f => ({ ...f, referral_due_business_days: e.target.value === "business" }))}
+                  className={inputClass + " w-48"}>
+                  <option value="business">Business days</option>
+                  <option value="calendar">Calendar days</option>
+                </select>
+                <span className="text-xs text-slate-400">after referral date</span>
               </div>
             </div>
 

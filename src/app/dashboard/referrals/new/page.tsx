@@ -8,6 +8,28 @@ import { Suspense } from "react";
 interface Patient { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null; pronouns?: string | null; }
 interface StaffMember { id: string; clerk_user_id: string; first_name: string; last_name: string; title: string | null; role: string; }
 
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function addDays(dateStr: string, days: number, businessDaysOnly: boolean): string {
+  const date = new Date(dateStr + "T12:00:00");
+  if (!businessDaysOnly) {
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split("T")[0];
+  }
+  let added = 0;
+  while (added < days) {
+    date.setDate(date.getDate() + 1);
+    const dow = date.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return date.toISOString().split("T")[0];
+}
+
 function NewReferralForm() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -17,6 +39,25 @@ function NewReferralForm() {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
 
+  const [referralDueDays, setReferralDueDays] = useState<{ days: number; business_days: boolean } | null>(null);
+  const today = new Date().toISOString().split("T")[0];
+
+  // Fetch org referral settings
+  useEffect(() => {
+    fetch("/api/settings/referral-defaults", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        if (d.referral_due_days) {
+          setReferralDueDays(d);
+          setForm(f => ({
+            ...f,
+            due_date: addDays(f.referral_date, d.referral_due_days, d.referral_due_business_days ?? false),
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [form, setForm] = useState({
     client_id: "", patient_name: "",
     referral_type: "outgoing",
@@ -25,7 +66,7 @@ function NewReferralForm() {
     referred_to: "", referred_to_email: "", referred_to_org: "",
     internal_provider_clerk_id: "",
     reason: "", notes: "",
-    referral_date: new Date().toISOString().split("T")[0],
+    referral_date: today,
     due_date: "",
     applicant_first_name: "",
     applicant_last_name: "",
@@ -163,7 +204,7 @@ function NewReferralForm() {
               <div><label className={labelClass}>First Name *</label><input value={form.applicant_first_name} onChange={e => set("applicant_first_name", e.target.value)} className={inputClass} placeholder="First name..." /></div>
               <div><label className={labelClass}>Last Name *</label><input value={form.applicant_last_name} onChange={e => set("applicant_last_name", e.target.value)} className={inputClass} placeholder="Last name..." /></div>
               <div><label className={labelClass}>Date of Birth</label><input type="date" value={form.applicant_dob} onChange={e => set("applicant_dob", e.target.value)} className={inputClass} /></div>
-              <div><label className={labelClass}>Phone</label><input type="tel" value={form.applicant_phone} onChange={e => set("applicant_phone", e.target.value)} className={inputClass} placeholder="(555) 000-0000" /></div>
+              <div><label className={labelClass}>Phone</label><input type="tel" value={form.applicant_phone} onChange={e => setForm(f => ({ ...f, applicant_phone: formatPhone(e.target.value) }))} className={inputClass} placeholder="(555) 000-0000" /></div>
               <div><label className={labelClass}>Applicant Email</label><input type="email" value={form.applicant_email} onChange={e => set("applicant_email", e.target.value)} className={inputClass} placeholder="applicant@email.com" /></div>
               <div><label className={labelClass}>Insurance / Payor</label><input value={form.applicant_insurance} onChange={e => set("applicant_insurance", e.target.value)} className={inputClass} placeholder="Insurance provider and member ID..." /></div>
             </div>
@@ -266,7 +307,14 @@ function NewReferralForm() {
         )}
 
         <div className="grid grid-cols-2 gap-4">
-          <div><label className={labelClass}>Referral Date</label><input type="date" value={form.referral_date} onChange={e => set("referral_date", e.target.value)} className={inputClass} /></div>
+          <div><label className={labelClass}>Referral Date</label><input type="date" value={form.referral_date} onChange={e => {
+            const newDate = e.target.value;
+            setForm(f => ({
+              ...f,
+              referral_date: newDate,
+              due_date: referralDueDays ? addDays(newDate, referralDueDays.days, referralDueDays.business_days) : f.due_date,
+            }));
+          }} className={inputClass} /></div>
           <div><label className={labelClass}>Due / Response By</label><input type="date" value={form.due_date} onChange={e => set("due_date", e.target.value)} className={inputClass} /></div>
         </div>
 

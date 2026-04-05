@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
 
   // Allowlist safe fields to prevent mass-assignment of sensitive fields
-  const ALLOWED_FIELDS = ["name", "client_terminology", "address", "phone", "email", "npi", "tax_id", "logo_url", "timezone", "default_session_duration", "billing_email", "website"];
+  const ALLOWED_FIELDS = ["name", "client_terminology", "address", "phone", "email", "npi", "tax_id", "logo_url", "timezone", "default_session_duration", "billing_email", "website", "address_line1", "city", "state", "zip", "org_type", "referral_due_days", "referral_due_business_days"];
   const sanitized: Record<string, unknown> = {};
   for (const key of ALLOWED_FIELDS) {
     if (key in body) sanitized[key] = body[key];
