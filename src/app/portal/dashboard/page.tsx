@@ -69,6 +69,12 @@ export default async function PortalDashboardPage() {
           )}
         </Link>
 
+        <Link href="/portal/assessments" className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-sm transition-shadow no-underline">
+          <div className="text-3xl mb-2">📋</div>
+          <div className="font-semibold text-slate-900 text-sm">Questionnaires</div>
+          <div className="text-xs text-slate-400 mt-0.5">Complete health questionnaires before your appointment</div>
+        </Link>
+
         <div className="bg-white border border-slate-200 rounded-2xl p-5">
           <div className="text-3xl mb-2">👤</div>
           <div className="font-semibold text-slate-900 text-sm">My Information</div>

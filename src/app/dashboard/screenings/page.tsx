@@ -23,6 +23,8 @@ export default async function ScreeningsPage() {
     .order("administered_at", { ascending: false })
     .limit(50);
 
+  const patientSubmittedCount = screenings?.filter(s => s.source === "patient_portal").length || 0;
+
   const phq9Count = screenings?.filter(s => s.tool === "phq9").length || 0;
   const gad7Count = screenings?.filter(s => s.tool === "gad7").length || 0;
   const cssrsCount = screenings?.filter(s => s.tool === "cssrs").length || 0;
@@ -66,6 +68,16 @@ export default async function ScreeningsPage() {
           </Link>
         </div>
       </div>
+
+      {patientSubmittedCount > 0 && (
+        <div className="bg-teal-50 border border-teal-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+          <span className="text-2xl">📲</span>
+          <div>
+            <div className="font-semibold text-teal-800">Patient-submitted questionnaires</div>
+            <div className="text-sm text-teal-600">{patientSubmittedCount} screening{patientSubmittedCount > 1 ? "s were" : " was"} completed by patients via the portal — review before appointments</div>
+          </div>
+        </div>
+      )}
 
       {siAlerts > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
@@ -249,6 +261,7 @@ export default async function ScreeningsPage() {
               <tr className="border-b border-slate-100 bg-slate-50">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Client</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tool</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Source</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Score</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Severity</th>
@@ -289,6 +302,13 @@ export default async function ScreeningsPage() {
                       <span className={`text-xs font-bold px-2 py-0.5 rounded ${toolBadgeClass[s.tool] || "bg-slate-100 text-slate-600"}`}>
                         {s.tool === "dast10" ? "DAST-10" : s.tool?.toUpperCase()}
                       </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {s.source === "patient_portal" ? (
+                        <span className="text-xs bg-teal-100 text-teal-700 font-semibold px-2 py-0.5 rounded-full">📲 Patient</span>
+                      ) : (
+                        <span className="text-xs text-slate-400">Clinician</span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{s.administered_at ? new Date(s.administered_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
                     <td className="px-4 py-3.5 text-2xl font-bold text-slate-900">

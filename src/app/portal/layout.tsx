@@ -51,6 +51,7 @@ export default async function PortalLayout({ children }: { children: React.React
     { href: "/portal/dashboard", label: "Home", icon: "🏠" },
     ...(access.messages !== false ? [{ href: "/portal/messages", label: "Messages", icon: "💬" }] : []),
     ...(access.appointments !== false ? [{ href: "/portal/appointments", label: "Appointments", icon: "📅" }] : []),
+    { href: "/portal/assessments", label: "Questionnaires", icon: "📋" },
     ...(access.billing ? [{ href: "/portal/billing", label: "Billing", icon: "💳" }] : []),
     { href: "/portal/profile", label: "My Profile", icon: "👤" },
   ];

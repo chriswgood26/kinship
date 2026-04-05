@@ -355,8 +355,14 @@ create table if not exists screenings (
   administered_by_clerk_id text,
   administered_at timestamptz default now(),
   notes text,
+  source text default 'clinician',        -- clinician | patient_portal
+  portal_user_id uuid references portal_users(id) on delete set null,
   created_at timestamptz default now()
 );
+
+-- Migration: add patient portal source columns to screenings
+alter table screenings add column if not exists source text default 'clinician';
+alter table screenings add column if not exists portal_user_id uuid references portal_users(id) on delete set null;
 
 -- Feedback
 create table if not exists feedback (
