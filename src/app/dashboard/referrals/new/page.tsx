@@ -16,7 +16,9 @@ function formatPhone(value: string): string {
 }
 
 function addDays(dateStr: string, days: number, businessDaysOnly: boolean): string {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return "";
   const date = new Date(dateStr + "T12:00:00");
+  if (isNaN(date.getTime())) return "";
   if (!businessDaysOnly) {
     date.setDate(date.getDate() + days);
     return date.toISOString().split("T")[0];
