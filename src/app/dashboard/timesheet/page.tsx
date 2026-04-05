@@ -191,6 +191,24 @@ function buildCSV(
   }
   rows.push([]);
 
+  // — Summary by Funding Source —
+  rows.push([q("HOURS BY FUNDING SOURCE")]);
+  rows.push([q("Funding Source"), q("Total Hours"), q("Billable Hours"), q("% of Total"), q("Entries")]);
+  const byFunding = new Map<string, { total: number; billable: number; count: number }>();
+  for (const e of exportEntries) {
+    const key = e.funding_source || "— Unassigned —";
+    const cur = byFunding.get(key) || { total: 0, billable: 0, count: 0 };
+    cur.total += e.duration_minutes || 0;
+    if (e.is_billable) cur.billable += e.duration_minutes || 0;
+    cur.count++;
+    byFunding.set(key, cur);
+  }
+  for (const [src, v] of Array.from(byFunding.entries()).sort((a, b) => b[1].total - a[1].total)) {
+    const pct = totalMins > 0 ? ((v.total / totalMins) * 100).toFixed(1) + "%" : "0%";
+    rows.push([q(src), q(fmt(v.total)), q(fmt(v.billable)), q(pct), q(v.count)]);
+  }
+  rows.push([]);
+
   // — Detail —
   rows.push([q("DETAIL")]);
   rows.push([
@@ -398,6 +416,33 @@ export default function TimesheetPage() {
     entries: entries.filter(e => e.entry_date === d.toISOString().split("T")[0]),
   }));
 
+  // Funding source breakdown for the current week view
+  const fundingBreakdown = (() => {
+    const map = new Map<string, number>();
+    for (const e of entries) {
+      const key = e.funding_source || "Unassigned";
+      map.set(key, (map.get(key) || 0) + (e.duration_minutes || 0));
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([source, mins]) => ({
+        source,
+        mins,
+        pct: totalMinutes > 0 ? Math.round((mins / totalMinutes) * 100) : 0,
+      }));
+  })();
+
+  const FUNDING_COLORS: Record<string, string> = {
+    "Medicaid / OHP": "bg-blue-500",
+    "Medicare": "bg-indigo-500",
+    "CCBHC Grant": "bg-purple-500",
+    "Block Grant": "bg-amber-500",
+    "Private Insurance": "bg-teal-500",
+    "Self-Pay": "bg-slate-400",
+    "Other": "bg-slate-300",
+    "Unassigned": "bg-slate-200",
+  };
+
   const inputClass = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white";
   const labelClass = "text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5";
 
@@ -473,6 +518,50 @@ export default function TimesheetPage() {
           </div>
         ))}
       </div>
+
+      {/* Funding source breakdown */}
+      {entries.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-slate-900 text-sm">Funding Source Allocation</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Hours by payer / funding stream this week</p>
+            </div>
+            <span className="text-xs text-slate-400">{formatHours(totalMinutes)} total</span>
+          </div>
+          {fundingBreakdown.length === 1 && fundingBreakdown[0].source === "Unassigned" ? (
+            <p className="text-xs text-slate-400 italic">No funding sources assigned yet. Select a funding source when logging time to track Medicaid, Block Grant, CCBHC, and other payer hours.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {/* Stacked bar */}
+              <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
+                {fundingBreakdown.map(({ source, pct }) => (
+                  pct > 0 && (
+                    <div
+                      key={source}
+                      title={`${source}: ${pct}%`}
+                      style={{ width: `${pct}%` }}
+                      className={`${FUNDING_COLORS[source] || "bg-slate-300"} transition-all`}
+                    />
+                  )
+                ))}
+              </div>
+              {/* Legend */}
+              <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                {fundingBreakdown.map(({ source, mins, pct }) => (
+                  <div key={source} className="flex items-center gap-1.5 text-xs">
+                    <span className={`w-2.5 h-2.5 rounded-sm flex-shrink-0 ${FUNDING_COLORS[source] || "bg-slate-300"}`} />
+                    <span className="text-slate-600 font-medium">{source}</span>
+                    <span className="text-slate-400">{formatHours(mins)}</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-400">{pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Log time form */}
       {showForm && (
@@ -600,6 +689,13 @@ export default function TimesheetPage() {
                       {entry.is_billable ? "Billable" : "Non-billable"}
                     </span>
                   </div>
+                  {entry.funding_source && (
+                    <div className="flex-shrink-0 hidden sm:block">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200">
+                        {entry.funding_source}
+                      </span>
+                    </div>
+                  )}
                   <button onClick={() => deleteEntry(entry.id)} className="text-slate-300 hover:text-red-400 flex-shrink-0 text-sm">✕</button>
                 </div>
               );
@@ -671,7 +767,7 @@ export default function TimesheetPage() {
               </div>
 
               <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500">
-                <strong className="text-slate-700">Report includes:</strong> Summary by activity type · Summary by patient · Summary by program · Full detail rows
+                <strong className="text-slate-700">Report includes:</strong> Summary by activity type · Summary by patient · Summary by program · <strong className="text-teal-700">Summary by funding source</strong> (Medicaid, Block Grant, CCBHC, etc.) · Full detail rows
               </div>
             </div>
             <div className="flex gap-3 justify-end px-6 py-4 border-t border-slate-100">
