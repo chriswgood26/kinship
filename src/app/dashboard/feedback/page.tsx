@@ -64,9 +64,20 @@ export default function FeedbackPage() {
       <div>
         <div className="flex items-center gap-3 mb-1">
           <Link href="/dashboard" className="text-slate-400 hover:text-slate-700">←</Link>
-          <h1 className="text-2xl font-bold text-slate-900">Share Feedback</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Feedback</h1>
         </div>
-        <p className="text-slate-500 text-sm ml-8">
+        <div className="ml-8 flex gap-1 mt-3 border-b border-slate-200">
+          <span className="px-4 py-2 text-sm font-semibold text-teal-600 border-b-2 border-teal-500 rounded-t-lg bg-teal-50">
+            Share Feedback
+          </span>
+          <Link
+            href="/dashboard/feedback/share"
+            className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 rounded-t-lg"
+          >
+            Share Kinship EHR
+          </Link>
+        </div>
+        <p className="text-slate-500 text-sm ml-8 mt-3">
           Help us build the EHR your agency actually needs. We read every submission.
         </p>
       </div>
