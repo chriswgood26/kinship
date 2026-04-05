@@ -68,6 +68,13 @@ export default async function AssessmentsPage() {
             <div className="text-sm text-slate-500 mt-1">Comprehensive intake assessment — 10 sections covering presenting problem, history, risk, and diagnostic impression</div>
             <div className="mt-3 text-xs text-teal-600 font-semibold">Intake Assessment</div>
           </Link>
+          <Link href="/dashboard/assessments/psych-eval/new"
+            className="bg-white rounded-2xl border-2 border-indigo-200 hover:border-indigo-400 p-5 text-left transition-all hover:shadow-sm">
+            <div className="text-3xl mb-3">🔍</div>
+            <div className="font-bold text-slate-900">Psychiatric Evaluation</div>
+            <div className="text-sm text-slate-500 mt-1">Full psychiatric diagnostic evaluation — 11 sections including HPI, MSE, risk assessment, formulation, and treatment plan</div>
+            <div className="mt-3 text-xs text-indigo-600 font-semibold">Psychiatric Evaluation</div>
+          </Link>
           <Link href="/dashboard/assessments/screenings/phq9/new"
           className="bg-white border-2 border-blue-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-sm transition-all">
           <div className="text-3xl mb-2">🔵</div>
@@ -106,6 +113,7 @@ export default async function AssessmentsPage() {
                 <Link key={a.id} href={
                   a.assessment_type === "BPS" ? `/dashboard/assessments/bps/${a.id}` :
                   a.assessment_type === "CUMHA" ? `/dashboard/assessments/cumha/${a.id}` :
+                  a.assessment_type === "Psych Eval" ? `/dashboard/assessments/psych-eval/${a.id}` :
                   `/dashboard/assessments/imcans/${a.id}`
                 }
                   className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors no-underline">
