@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EncounterContextBanner from "@/components/EncounterContextBanner";
-import PatientTimelineDrawer from "@/components/ClientTimelineDrawer";
+import ClientTimelineDrawer from "@/components/ClientTimelineDrawer";
 
 const SECTIONS = [
   { id: "identifying", label: "Identifying Information", icon: "👤" },
@@ -624,7 +624,7 @@ function PsychEvalForm() {
           </button>
         )}
       </div>
-      {form.client_id && <PatientTimelineDrawer patientId={form.client_id} />}
+      {form.client_id && <ClientTimelineDrawer clientId={form.client_id} />}
     </div>
   );
 }

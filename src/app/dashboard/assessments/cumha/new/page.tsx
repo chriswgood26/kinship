@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EncounterContextBanner from "@/components/EncounterContextBanner";
 import EncounterAttachment from "@/components/EncounterAttachment";
-import PatientTimelineDrawer from "@/components/ClientTimelineDrawer";
+import ClientTimelineDrawer from "@/components/ClientTimelineDrawer";
 
 const SECTIONS = [
   { id: "identifying", label: "Identifying Information", icon: "👤" },
@@ -480,7 +480,7 @@ function CUMHAForm() {
         )}
       </div>
 
-      {patientId && <PatientTimelineDrawer patientId={patientId} />}
+      {patientId && <ClientTimelineDrawer clientId={patientId} />}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EncounterContextBanner from "@/components/EncounterContextBanner";
 import EncounterAttachment from "@/components/EncounterAttachment";
-import PatientTimelineDrawer from "@/components/ClientTimelineDrawer";
+import ClientTimelineDrawer from "@/components/ClientTimelineDrawer";
 import { Suspense } from "react";
 import { CSSRS, getCSSRSRisk } from "@/lib/cssrs";
 
@@ -299,7 +299,7 @@ function CSSRSForm() {
           </div>
         </div>
       )}
-      {form.client_id && <PatientTimelineDrawer patientId={form.client_id} />}
+      {form.client_id && <ClientTimelineDrawer clientId={form.client_id} />}
     </div>
   );
 }

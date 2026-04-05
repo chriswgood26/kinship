@@ -32,12 +32,12 @@ const TYPE_FILTERS = [
   { key: "vitals", label: "🩺 Vitals" },
   { key: "medication", label: "💊 Medications" },
   { key: "referral", label: "🔄 Referrals" },
-  { key: "incident", label: "🚨 Incidents" },
+  { key: "screening", label: "📋 Screenings" },
   { key: "roi", label: "📄 ROIs" },
   { key: "portal_message", label: "💬 Messages" },
 ];
 
-export default function PatientTimelineDrawer({ patientId }: { patientId: string }) {
+export default function ClientTimelineDrawer({ clientId }: { clientId: string }) {
   const [open, setOpen] = useState(false);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ export default function PatientTimelineDrawer({ patientId }: { patientId: string
   async function load() {
     if (loaded) return;
     setLoading(true);
-    const res = await fetch(`/api/client-timeline?patient_id=${patientId}`, { credentials: "include" });
+    const res = await fetch(`/api/client-timeline?client_id=${clientId}`, { credentials: "include" });
     const d = await res.json();
     setTimeline(d.timeline || []);
     setLoading(false);
@@ -80,7 +80,7 @@ export default function PatientTimelineDrawer({ patientId }: { patientId: string
         className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1 px-2 py-4 rounded-l-xl shadow-lg border border-r-0 transition-all no-print ${
           open ? "bg-[#0d1b2e] text-white border-[#0d1b2e]" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
         }`}
-        title="Patient Timeline"
+        title="Client Timeline"
       >
         <span className="text-lg">📜</span>
         <span className="text-[10px] font-bold uppercase tracking-wide" style={{ writingMode: "vertical-rl" }}>Timeline</span>
@@ -98,7 +98,7 @@ export default function PatientTimelineDrawer({ patientId }: { patientId: string
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-[#0d1b2e]">
           <div>
-            <h2 className="font-bold text-white">Patient Timeline</h2>
+            <h2 className="font-bold text-white">Client Timeline</h2>
             <p className="text-slate-400 text-xs mt-0.5">{filtered.length} events{filter ? ` · ${filter}` : ""}</p>
           </div>
           <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-white text-xl">✕</button>

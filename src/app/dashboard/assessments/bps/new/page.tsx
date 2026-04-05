@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EncounterContextBanner from "@/components/EncounterContextBanner";
 import EncounterAttachment from "@/components/EncounterAttachment";
-import PatientTimelineDrawer from "@/components/ClientTimelineDrawer";
+import ClientTimelineDrawer from "@/components/ClientTimelineDrawer";
 
 const SECTIONS = [
   { id: "presenting", label: "Presenting Problem", icon: "🎯" },
@@ -479,7 +479,7 @@ function BPSForm() {
           </button>
         )}
       </div>
-      {form.client_id && <PatientTimelineDrawer patientId={form.client_id} />}
+      {form.client_id && <ClientTimelineDrawer clientId={form.client_id} />}
     </div>
   );
 }

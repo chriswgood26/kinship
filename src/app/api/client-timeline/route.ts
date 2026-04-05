@@ -1,35 +1,33 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getOrgId } from "@/lib/getOrgId";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = await getOrgId(userId);
 
-  const patientId = req.nextUrl.searchParams.get("patient_id");
-  if (!patientId) return NextResponse.json({ error: "client_id required" }, { status: 400 });
+  const clientId = req.nextUrl.searchParams.get("client_id");
+  if (!clientId) return NextResponse.json({ error: "client_id required" }, { status: 400 });
 
   // Fetch all timeline events in parallel
   const [
     { data: encounters },
     { data: assessments },
-    { data: vitals },
-    { data: medications },
+    { data: screenings },
     { data: referrals },
     { data: rois },
-    { data: incidents },
     { data: treatmentPlans },
     { data: portalMessages },
   ] = await Promise.all([
-    supabaseAdmin.from("encounters").select("id, encounter_date, encounter_type, status, chief_complaint").eq("client_id", patientId).order("encounter_date", { ascending: false }).limit(20),
-    supabaseAdmin.from("assessments").select("id, assessment_type, assessment_date, status, total_score, level_of_care, severity_label").eq("client_id", patientId).order("assessment_date", { ascending: false }).limit(20),
-    supabaseAdmin.from("patient_vitals").select("id, recorded_at, systolic_bp, diastolic_bp, heart_rate, temperature_f, oxygen_saturation, pain_scale, weight_lbs").eq("client_id", patientId).order("recorded_at", { ascending: false }).limit(30),
-    supabaseAdmin.from("medication_orders").select("id, medication_name, dosage, frequency, start_date, status").eq("client_id", patientId).order("start_date", { ascending: false }).limit(10),
-    supabaseAdmin.from("referrals").select("id, referral_date, referral_type, referred_to, status, reason").eq("client_id", patientId).order("referral_date", { ascending: false }).limit(10),
-    supabaseAdmin.from("releases_of_information").select("id, created_at, direction, recipient_name, purpose, status").eq("client_id", patientId).order("created_at", { ascending: false }).limit(10),
-    supabaseAdmin.from("incident_reports").select("id, incident_date, incident_type, severity, status").eq("client_id", patientId).order("incident_date", { ascending: false }).limit(10),
-    supabaseAdmin.from("treatment_plans").select("id, created_at, status, next_review_date").eq("client_id", patientId).order("created_at", { ascending: false }).limit(5),
-    supabaseAdmin.from("portal_messages").select("id, created_at, direction, subject, body").eq("client_id", patientId).order("created_at", { ascending: false }).limit(10),
+    supabaseAdmin.from("encounters").select("id, encounter_date, encounter_type, status, chief_complaint").eq("organization_id", orgId).eq("client_id", clientId).order("encounter_date", { ascending: false }).limit(20),
+    supabaseAdmin.from("assessments").select("id, assessment_type, assessment_date, status, total_score, level_of_care, severity_label").eq("organization_id", orgId).eq("client_id", clientId).order("assessment_date", { ascending: false }).limit(20),
+    supabaseAdmin.from("screenings").select("id, tool, administered_at, total_score, severity_label").eq("organization_id", orgId).eq("client_id", clientId).order("administered_at", { ascending: false }).limit(20),
+    supabaseAdmin.from("referrals").select("id, referral_date, referral_type, referred_to, status, reason").eq("organization_id", orgId).eq("client_id", clientId).order("referral_date", { ascending: false }).limit(10),
+    supabaseAdmin.from("releases_of_information").select("id, created_at, direction, recipient_name, purpose, status").eq("organization_id", orgId).eq("client_id", clientId).order("created_at", { ascending: false }).limit(10),
+    supabaseAdmin.from("treatment_plans").select("id, created_at, status, next_review_date").eq("organization_id", orgId).eq("client_id", clientId).order("created_at", { ascending: false }).limit(5),
+    supabaseAdmin.from("portal_messages").select("id, created_at, direction, subject, body").eq("organization_id", orgId).eq("client_id", clientId).order("created_at", { ascending: false }).limit(10),
   ]);
 
   // Build unified timeline
@@ -76,38 +74,19 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  for (const v of (vitals || [])) {
-    const abnormal = (v.systolic_bp && v.systolic_bp >= 140) || (v.oxygen_saturation && v.oxygen_saturation < 95) || (v.pain_scale && v.pain_scale >= 7);
+  for (const s of (screenings || [])) {
+    const isHighRisk = s.severity_label?.includes("High") || s.severity_label?.includes("Severe") || s.severity_label?.includes("Imminent");
     timeline.push({
-      id: `vital-${v.id}`,
-      date: v.recorded_at,
-      type: "vitals",
-      icon: "🩺",
-      title: "Vitals Recorded",
-      subtitle: [
-        v.systolic_bp && v.diastolic_bp ? `BP ${v.systolic_bp}/${v.diastolic_bp}` : null,
-        v.heart_rate ? `HR ${v.heart_rate}` : null,
-        v.oxygen_saturation ? `O₂ ${v.oxygen_saturation}%` : null,
-        v.pain_scale !== null && v.pain_scale !== undefined ? `Pain ${v.pain_scale}/10` : null,
-      ].filter(Boolean).join(" · "),
-      badge: abnormal ? "Abnormal" : undefined,
-      badgeColor: "red",
-      href: `/dashboard/clients/${patientId}/vitals`,
-      urgent: !!abnormal,
-    });
-  }
-
-  for (const m of (medications || [])) {
-    timeline.push({
-      id: `med-${m.id}`,
-      date: m.start_date + "T08:00:00",
-      type: "medication",
-      icon: "💊",
-      title: m.status === "active" ? "Medication Started" : "Medication Order",
-      subtitle: `${m.medication_name} ${m.dosage} ${m.frequency}`,
-      badge: m.status,
-      badgeColor: m.status === "active" ? "emerald" : "slate",
-      href: `/dashboard/emar`,
+      id: `screen-${s.id}`,
+      date: s.administered_at,
+      type: "screening",
+      icon: "📋",
+      title: s.tool?.toUpperCase() || "Screening",
+      subtitle: s.severity_label || (s.total_score !== null ? `Score: ${s.total_score}` : ""),
+      badge: s.severity_label || (s.total_score !== null ? `${s.total_score}` : undefined) || undefined,
+      badgeColor: isHighRisk ? "red" : "blue",
+      href: `/dashboard/screenings`,
+      urgent: !!isHighRisk,
     });
   }
 
@@ -139,21 +118,6 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  for (const inc of (incidents || [])) {
-    timeline.push({
-      id: `inc-${inc.id}`,
-      date: inc.incident_date + "T12:00:00",
-      type: "incident",
-      icon: "🚨",
-      title: `Incident Report — ${inc.incident_type?.replace(/_/g, " ")}`,
-      subtitle: `Severity: ${inc.severity}`,
-      badge: inc.severity ?? undefined,
-      badgeColor: inc.severity === "critical" || inc.severity === "serious" ? "red" : "amber",
-      href: `/dashboard/incidents`,
-      urgent: inc.severity === "critical",
-    });
-  }
-
   for (const tp of (treatmentPlans || [])) {
     timeline.push({
       id: `tp-${tp.id}`,
@@ -174,9 +138,9 @@ export async function GET(req: NextRequest) {
       date: msg.created_at,
       type: "portal_message",
       icon: msg.direction === "inbound" ? "💬" : "📨",
-      title: msg.direction === "inbound" ? "Patient Message" : "Staff Message Sent",
+      title: msg.direction === "inbound" ? "Client Message" : "Staff Message Sent",
       subtitle: msg.subject || msg.body?.slice(0, 60) + "..." || "",
-      href: `/dashboard/clients/${patientId}`,
+      href: `/dashboard/clients/${clientId}`,
     });
   }
 
