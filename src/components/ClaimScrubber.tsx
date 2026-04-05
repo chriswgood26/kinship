@@ -14,7 +14,19 @@ interface ValidationResult {
   errors: RuleResult[];
   warnings: RuleResult[];
   infos: RuleResult[];
+  payer_type?: string;
+  payer_type_label?: string;
+  insurance_provider?: string | null;
 }
+
+const PAYER_TYPE_COLORS: Record<string, string> = {
+  medicaid:           "bg-blue-100 text-blue-700 border border-blue-200",
+  medicare:           "bg-red-100 text-red-700 border border-red-200",
+  medicare_advantage: "bg-orange-100 text-orange-700 border border-orange-200",
+  commercial:         "bg-slate-100 text-slate-600 border border-slate-200",
+  self_pay:           "bg-teal-100 text-teal-700 border border-teal-200",
+  unknown:            "bg-slate-50 text-slate-400 border border-slate-100",
+};
 
 interface Charge {
   id: string;
@@ -91,25 +103,66 @@ export default function ClaimScrubber({ charges }: Props) {
         </div>
 
         {/* Rules legend */}
-        <div className="grid grid-cols-3 gap-3 text-xs">
-          {[
-            { icon: "✅", label: "BL001", desc: "MH CPT requires MH diagnosis" },
-            { icon: "✅", label: "BL002", desc: "Prior auth recommended for eval CPTs" },
-            { icon: "✅", label: "BL003", desc: "Units within allowed maximum" },
-            { icon: "✅", label: "BL004", desc: "At least one ICD-10 code required" },
-            { icon: "✅", label: "BL005", desc: "Max 4 diagnosis codes per claim" },
-            { icon: "✅", label: "BL006", desc: "Payer session limit advisory" },
-            { icon: "✅", label: "BL007", desc: "Service date not in the future" },
-            { icon: "✅", label: "BL008", desc: "Timely filing within 90 days" },
-          ].map(r => (
-            <div key={r.label} className="flex items-start gap-1.5 bg-slate-50 rounded-lg p-2">
-              <span className="text-xs">{r.icon}</span>
-              <div>
-                <span className="font-mono font-bold text-slate-600">{r.label}</span>
-                <span className="text-slate-400 ml-1">{r.desc}</span>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Core Rules</p>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            {[
+              { label: "BL001", desc: "MH CPT requires MH diagnosis" },
+              { label: "BL002", desc: "Prior auth for eval CPTs" },
+              { label: "BL003", desc: "Units within allowed maximum" },
+              { label: "BL004", desc: "ICD-10 code required" },
+              { label: "BL005", desc: "Max 4 diagnosis codes" },
+              { label: "BL006", desc: "Payer session limit advisory" },
+              { label: "BL007", desc: "Service date not in the future" },
+              { label: "BL008", desc: "Timely filing within 90 days" },
+            ].map(r => (
+              <div key={r.label} className="flex items-start gap-1.5 bg-slate-50 rounded-lg p-2">
+                <span className="text-xs">✅</span>
+                <div>
+                  <span className="font-mono font-bold text-slate-600">{r.label}</span>
+                  <span className="text-slate-400 ml-1">{r.desc}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide pt-1">Medicaid Rules</p>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            {[
+              { label: "MC001", desc: "Service auth for high-acuity codes" },
+              { label: "MC002", desc: "Medicaid HCPCS code eligibility check" },
+              { label: "MC003", desc: "Timely filing (365-day limit)" },
+              { label: "MC004", desc: "Enrollment verification reminder" },
+            ].map(r => (
+              <div key={r.label} className="flex items-start gap-1.5 bg-blue-50 rounded-lg p-2">
+                <span className="text-xs">🔵</span>
+                <div>
+                  <span className="font-mono font-bold text-blue-600">{r.label}</span>
+                  <span className="text-slate-400 ml-1">{r.desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide pt-1">Medicare Rules</p>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            {[
+              { label: "MR001", desc: "H/T-codes not covered by Medicare" },
+              { label: "MR002", desc: "Telehealth modifier GT/95 required" },
+              { label: "MR003", desc: "Timely filing (1-year limit)" },
+              { label: "MR004", desc: "Functional limitation documentation" },
+              { label: "MR005", desc: "Psych eval prior auth advisory" },
+              { label: "MAR001", desc: "MA plan: Medicaid codes not covered" },
+              { label: "MAR002", desc: "MA plan: prior auth commonly required" },
+              { label: "MAR003", desc: "MA plan: telehealth modifier" },
+            ].map(r => (
+              <div key={r.label} className="flex items-start gap-1.5 bg-red-50 rounded-lg p-2">
+                <span className="text-xs">🔴</span>
+                <div>
+                  <span className="font-mono font-bold text-red-600">{r.label}</span>
+                  <span className="text-slate-400 ml-1">{r.desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -156,11 +209,21 @@ export default function ClaimScrubber({ charges }: Props) {
                     <div className="flex items-center gap-3">
                       <span className="text-lg">{result.errors.length > 0 ? "❌" : result.warnings.length > 0 ? "⚠️" : "✅"}</span>
                       <div>
-                        <div className="font-semibold text-sm text-slate-900">
-                          {patient ? `${patient.last_name}, ${patient.first_name}` : "—"}
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-slate-900">
+                            {patient ? `${patient.last_name}, ${patient.first_name}` : "—"}
+                          </span>
+                          {result.payer_type && result.payer_type !== "unknown" && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${PAYER_TYPE_COLORS[result.payer_type] || PAYER_TYPE_COLORS.unknown}`}>
+                              {result.payer_type_label || result.payer_type}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500">
                           {charge.cpt_code} · {new Date(charge.service_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · ${Number(charge.charge_amount).toFixed(2)}
+                          {result.insurance_provider && (
+                            <span className="text-slate-400 ml-1">· {result.insurance_provider}</span>
+                          )}
                         </div>
                       </div>
                     </div>

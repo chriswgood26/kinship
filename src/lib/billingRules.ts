@@ -2,6 +2,15 @@
 // Validates charges before submission to reduce denials
 
 import { HCBS_CODE_MAP, isHcbsCode } from "./hcbsCodes";
+import {
+  detectPayerType,
+  validatePayerSpecificRules,
+  PayerType,
+  PAYER_TYPE_LABELS,
+} from "./payerRules";
+
+export { detectPayerType, PAYER_TYPE_LABELS };
+export type { PayerType };
 
 export interface ChargeInput {
   client_id: string;
@@ -52,6 +61,8 @@ export interface ValidationResult {
   errors: RuleResult[];
   warnings: RuleResult[];
   infos: RuleResult[];
+  /** Detected payer type based on insurance_provider — used for payer-specific rule display */
+  payer_type?: PayerType;
 }
 
 // CPT codes that REQUIRE a mental health ICD-10 diagnosis
@@ -231,6 +242,15 @@ export function validateCharge(charge: ChargeInput, program?: ProgramBillingConf
     }
   }
 
+  // ── Payer-specific rules (MC*, MR*, MAR*) ──────────────────────────────────
+  const payerType = detectPayerType(charge.insurance_provider);
+  const payerResults = validatePayerSpecificRules(charge, payerType);
+  payerResults.forEach(r => {
+    if (r.severity === "error") errors.push(r);
+    else if (r.severity === "warning") warnings.push(r);
+    else infos.push(r);
+  });
+
   // ── Program-level rules (BL012–BL014) ─────────────────────────────────────
   if (program) {
     // Rule 12: CPT code not in program's allowed list
@@ -275,6 +295,7 @@ export function validateCharge(charge: ChargeInput, program?: ProgramBillingConf
     errors,
     warnings,
     infos,
+    payer_type: detectPayerType(charge.insurance_provider),
   };
 }
 
