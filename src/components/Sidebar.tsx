@@ -33,6 +33,7 @@ const navSections: NavSection[] = [
       { href: "/dashboard/inbox", label: "Messages", icon: "💬", inboxBadge: true },
       { href: "/dashboard/financial-eligibility", label: "Financial Eligibility", icon: "💲" },
       { href: "/dashboard/authorizations", label: "Authorizations", icon: "🔐" },
+      { href: "/dashboard/consent-forms", label: "Consent Forms", icon: "✍️" },
     ],
   },
   {
