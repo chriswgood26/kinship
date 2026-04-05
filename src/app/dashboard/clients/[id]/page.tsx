@@ -184,9 +184,26 @@ export default async function ClientDetailPage({
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <h2 className="font-semibold text-slate-900 text-sm mb-3">Insurance</h2>
             <dl className="space-y-2">
+              <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">Primary</div>
               <InfoRow label="Provider" value={client.insurance_provider} />
               <InfoRow label="Member ID" value={client.insurance_member_id} />
               <InfoRow label="Group #" value={client.insurance_group_number} />
+              {(client.insurance_secondary_provider) && (
+                <>
+                  <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mt-3 mb-1">Secondary</div>
+                  <InfoRow label="Provider" value={client.insurance_secondary_provider} />
+                  <InfoRow label="Member ID" value={client.insurance_secondary_member_id} />
+                  {client.insurance_secondary_group_number && <InfoRow label="Group #" value={client.insurance_secondary_group_number} />}
+                </>
+              )}
+              {(client.insurance_tertiary_provider) && (
+                <>
+                  <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mt-3 mb-1">Tertiary</div>
+                  <InfoRow label="Provider" value={client.insurance_tertiary_provider} />
+                  <InfoRow label="Member ID" value={client.insurance_tertiary_member_id} />
+                  {client.insurance_tertiary_group_number && <InfoRow label="Group #" value={client.insurance_tertiary_group_number} />}
+                </>
+              )}
             </dl>
           </div>
 

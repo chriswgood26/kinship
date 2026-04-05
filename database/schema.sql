@@ -77,6 +77,12 @@ create table if not exists clients (
   insurance_auth_number text,
   insurance_secondary_provider text,
   insurance_secondary_member_id text,
+  insurance_secondary_group_number text,
+  insurance_secondary_auth_number text,
+  insurance_tertiary_provider text,
+  insurance_tertiary_member_id text,
+  insurance_tertiary_group_number text,
+  insurance_tertiary_auth_number text,
   status text default 'active', -- active, discharged, waitlist, transferred, deceased
   is_active boolean default true,
   created_at timestamptz default now(),

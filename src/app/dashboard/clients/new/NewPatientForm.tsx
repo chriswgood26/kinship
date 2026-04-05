@@ -21,7 +21,9 @@ export default function NewPatientForm({ prefill = {}, referralId }: { prefill?:
     phone_primary: prefill.phone_primary || "", phone_secondary: "", email: prefill.email || "",
     address_line1: "", address_line2: "", city: "", state: "", zip: "",
     emergency_contact_name: "", emergency_contact_phone: "", emergency_contact_relationship: "",
-    insurance_provider: prefill.insurance_provider || "", insurance_member_id: "", insurance_group_number: "",
+    insurance_provider: prefill.insurance_provider || "", insurance_member_id: "", insurance_group_number: "", insurance_auth_number: "",
+    insurance_secondary_provider: "", insurance_secondary_member_id: "", insurance_secondary_group_number: "", insurance_secondary_auth_number: "",
+    insurance_tertiary_provider: "", insurance_tertiary_member_id: "", insurance_tertiary_group_number: "", insurance_tertiary_auth_number: "",
   });
 
   const set = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }));
@@ -50,6 +52,7 @@ export default function NewPatientForm({ prefill = {}, referralId }: { prefill?:
     { id: "demographics", label: "Demographics" },
     { id: "contact", label: "Contact" },
     { id: "emergency", label: "Emergency Contact" },
+    { id: "insurance", label: "Insurance" },
   ];
 
   return (
@@ -244,6 +247,75 @@ export default function NewPatientForm({ prefill = {}, referralId }: { prefill?:
               <div>
                 <label className={labelClass}>Contact Phone</label>
                 <input type="tel" value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} className={inputClass} placeholder="(555) 000-0000" />
+              </div>
+            </>
+          )}
+
+          {/* Insurance */}
+          {activeTab === "insurance" && (
+            <>
+              <h3 className="text-sm font-semibold text-slate-700">Primary Insurance</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className={labelClass}>Insurance Provider</label>
+                  <input type="text" value={form.insurance_provider} onChange={e => set("insurance_provider", e.target.value)} className={inputClass} placeholder="e.g. Regence BlueShield" />
+                </div>
+                <div>
+                  <label className={labelClass}>Member ID</label>
+                  <input type="text" value={form.insurance_member_id} onChange={e => set("insurance_member_id", e.target.value)} className={inputClass} placeholder="Member ID" />
+                </div>
+                <div>
+                  <label className={labelClass}>Group Number</label>
+                  <input type="text" value={form.insurance_group_number} onChange={e => set("insurance_group_number", e.target.value)} className={inputClass} placeholder="Group #" />
+                </div>
+                <div className="col-span-2">
+                  <label className={labelClass}>Prior Auth Number</label>
+                  <input type="text" value={form.insurance_auth_number} onChange={e => set("insurance_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" />
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Secondary Insurance <span className="text-slate-400 font-normal">(optional)</span></h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className={labelClass}>Insurance Provider</label>
+                    <input type="text" value={form.insurance_secondary_provider} onChange={e => set("insurance_secondary_provider", e.target.value)} className={inputClass} placeholder="Secondary insurance provider" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Member ID</label>
+                    <input type="text" value={form.insurance_secondary_member_id} onChange={e => set("insurance_secondary_member_id", e.target.value)} className={inputClass} placeholder="Member ID" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Group Number</label>
+                    <input type="text" value={form.insurance_secondary_group_number} onChange={e => set("insurance_secondary_group_number", e.target.value)} className={inputClass} placeholder="Group #" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className={labelClass}>Prior Auth Number</label>
+                    <input type="text" value={form.insurance_secondary_auth_number} onChange={e => set("insurance_secondary_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Tertiary Insurance <span className="text-slate-400 font-normal">(optional)</span></h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className={labelClass}>Insurance Provider</label>
+                    <input type="text" value={form.insurance_tertiary_provider} onChange={e => set("insurance_tertiary_provider", e.target.value)} className={inputClass} placeholder="Tertiary insurance provider" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Member ID</label>
+                    <input type="text" value={form.insurance_tertiary_member_id} onChange={e => set("insurance_tertiary_member_id", e.target.value)} className={inputClass} placeholder="Member ID" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Group Number</label>
+                    <input type="text" value={form.insurance_tertiary_group_number} onChange={e => set("insurance_tertiary_group_number", e.target.value)} className={inputClass} placeholder="Group #" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className={labelClass}>Prior Auth Number</label>
+                    <input type="text" value={form.insurance_tertiary_auth_number} onChange={e => set("insurance_tertiary_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" />
+                  </div>
+                </div>
               </div>
             </>
           )}

@@ -39,6 +39,12 @@ export default function EditPatientForm({ patient }: { patient: Record<string, s
     insurance_auth_number: patient.insurance_auth_number || "",
     insurance_secondary_provider: patient.insurance_secondary_provider || "",
     insurance_secondary_member_id: patient.insurance_secondary_member_id || "",
+    insurance_secondary_group_number: (patient as {insurance_secondary_group_number?: string}).insurance_secondary_group_number || "",
+    insurance_secondary_auth_number: (patient as {insurance_secondary_auth_number?: string}).insurance_secondary_auth_number || "",
+    insurance_tertiary_provider: (patient as {insurance_tertiary_provider?: string}).insurance_tertiary_provider || "",
+    insurance_tertiary_member_id: (patient as {insurance_tertiary_member_id?: string}).insurance_tertiary_member_id || "",
+    insurance_tertiary_group_number: (patient as {insurance_tertiary_group_number?: string}).insurance_tertiary_group_number || "",
+    insurance_tertiary_auth_number: (patient as {insurance_tertiary_auth_number?: string}).insurance_tertiary_auth_number || "",
     // Copay / benefits
     insurance_copay: (patient as {insurance_copay?: number | null}).insurance_copay?.toString() || "",
     insurance_deductible: (patient as {insurance_deductible?: number | null}).insurance_deductible?.toString() || "",
@@ -184,6 +190,15 @@ export default function EditPatientForm({ patient }: { patient: Record<string, s
           </div>
           <div><label className={labelClass}>Secondary Provider</label><input value={form.insurance_secondary_provider} onChange={e => set("insurance_secondary_provider", e.target.value)} className={inputClass} placeholder="Secondary insurance" /></div>
           <div><label className={labelClass}>Secondary Member ID</label><input value={form.insurance_secondary_member_id} onChange={e => set("insurance_secondary_member_id", e.target.value)} className={inputClass} placeholder="Member ID" /></div>
+          <div><label className={labelClass}>Secondary Group Number</label><input value={(form as {insurance_secondary_group_number?: string}).insurance_secondary_group_number || ""} onChange={e => set("insurance_secondary_group_number", e.target.value)} className={inputClass} placeholder="Group #" /></div>
+          <div><label className={labelClass}>Secondary Prior Auth</label><input value={(form as {insurance_secondary_auth_number?: string}).insurance_secondary_auth_number || ""} onChange={e => set("insurance_secondary_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" /></div>
+          <div className="col-span-2 pt-2 border-t border-slate-100">
+            <h3 className="font-semibold text-slate-700 text-sm mb-3">Tertiary Insurance <span className="text-slate-400 font-normal">(optional)</span></h3>
+          </div>
+          <div><label className={labelClass}>Tertiary Provider</label><input value={(form as {insurance_tertiary_provider?: string}).insurance_tertiary_provider || ""} onChange={e => set("insurance_tertiary_provider", e.target.value)} className={inputClass} placeholder="Tertiary insurance" /></div>
+          <div><label className={labelClass}>Tertiary Member ID</label><input value={(form as {insurance_tertiary_member_id?: string}).insurance_tertiary_member_id || ""} onChange={e => set("insurance_tertiary_member_id", e.target.value)} className={inputClass} placeholder="Member ID" /></div>
+          <div><label className={labelClass}>Tertiary Group Number</label><input value={(form as {insurance_tertiary_group_number?: string}).insurance_tertiary_group_number || ""} onChange={e => set("insurance_tertiary_group_number", e.target.value)} className={inputClass} placeholder="Group #" /></div>
+          <div><label className={labelClass}>Tertiary Prior Auth</label><input value={(form as {insurance_tertiary_auth_number?: string}).insurance_tertiary_auth_number || ""} onChange={e => set("insurance_tertiary_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" /></div>
         </div>
       </div>
       <div className="flex gap-3 justify-end">
