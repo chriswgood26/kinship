@@ -10,6 +10,7 @@ import ClientDocumentsTab from "./ClientDocumentsTab";
 import ClientAllergiesTab from "./ClientAllergiesTab";
 import ClientScreeningsTab from "./ClientScreeningsTab";
 import AllergyWidget from "./AllergyWidget";
+import HousingStatusWidget from "./HousingStatusWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -226,6 +227,14 @@ export default async function ClientDetailPage({
               <InfoRow label="Phone" value={client.emergency_contact_phone} />
               <InfoRow label="Relationship" value={client.emergency_contact_relationship} />
             </dl>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-slate-900 text-sm">🏠 Housing Status</h2>
+              <Link href={`/dashboard/clients/${id}/housing`} className="text-xs text-teal-600 font-medium hover:text-teal-700">Manage →</Link>
+            </div>
+            <HousingStatusWidget clientId={id} />
           </div>
         </div>
       </div>}

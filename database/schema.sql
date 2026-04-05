@@ -1285,3 +1285,54 @@ create policy "org_day_attendance_update" on day_program_attendance
 create policy "org_day_attendance_delete" on day_program_attendance
   for delete using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
   for delete using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+
+-- Housing Status Assessments (CCBHC & grant reporting)
+create table if not exists client_housing_assessments (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+
+  -- Housing status (aligns with HUD/SAMHSA categories)
+  housing_status text not null check (housing_status in (
+    'housed_stable',         -- owns or rents stable housing
+    'housed_at_risk',        -- at risk of losing housing
+    'doubled_up',            -- couch surfing / temporarily with others
+    'transitional',          -- transitional housing program
+    'permanent_supportive',  -- permanent supportive housing
+    'emergency_shelter',     -- emergency or DV shelter
+    'homeless_unsheltered',  -- street / outdoors / vehicle / encampment
+    'institutional',         -- hospital, correctional, other institution
+    'unknown'                -- declined or unknown
+  )),
+
+  -- Additional detail
+  housing_type text,                      -- e.g. "Own home", "Rented apartment", "Vehicle", etc.
+  duration_homeless_months integer,       -- months homeless (if applicable)
+  is_chronically_homeless boolean not null default false,  -- HUD chronic homelessness definition
+
+  -- Assessment lifecycle
+  assessment_date date not null default current_date,
+  next_assessment_date date,
+  status text not null default 'active' check (status in ('active', 'superseded')),
+
+  -- Staff & notes
+  assessed_by_clerk_id text,
+  notes text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_client_housing_assessments_client on client_housing_assessments(client_id, assessment_date desc);
+create index if not exists idx_client_housing_assessments_org on client_housing_assessments(organization_id, assessment_date desc);
+
+alter table client_housing_assessments enable row level security;
+
+create policy "org_housing_select" on client_housing_assessments
+  for select using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_housing_insert" on client_housing_assessments
+  for insert with check (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_housing_update" on client_housing_assessments
+  for update using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_housing_delete" on client_housing_assessments
+  for delete using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
