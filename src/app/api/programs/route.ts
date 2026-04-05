@@ -4,17 +4,24 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getOrgId } from "@/lib/getOrgId";
 
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = await getOrgId(userId);
 
-  const { data } = await supabaseAdmin
+  const locationId = req.nextUrl.searchParams.get("location_id");
+  const includeInactive = req.nextUrl.searchParams.get("include_inactive") === "true";
+
+  let query = supabaseAdmin
     .from("programs")
-    .select("*")
+    .select("*, location:location_id(id, name, code, city, state)")
     .eq("organization_id", orgId)
-    .eq("is_active", true)
     .order("name");
+
+  if (!includeInactive) query = query.eq("is_active", true);
+  if (locationId) query = query.eq("location_id", locationId);
+
+  const { data } = await query;
   return NextResponse.json({ programs: data || [] });
 }
 
@@ -31,8 +38,9 @@ export async function POST(req: NextRequest) {
     program_type: body.program_type || "outpatient",
     description: body.description || null,
     capacity: body.capacity ? Number(body.capacity) : null,
+    location_id: body.location_id || null,
     is_active: true,
-  }).select().single();
+  }).select("*, location:location_id(id, name, code, city, state)").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ program: data }, { status: 201 });
 }

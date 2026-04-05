@@ -86,6 +86,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
       { href: "/dashboard/admin/licenses", label: "License Tracking", icon: "📜" },
+      { href: "/dashboard/admin/locations", label: "Locations & Sites", icon: "🏢" },
       { href: "/dashboard/portal", label: "Client Portal", icon: "🌐" },
       { href: "/dashboard/admin/settings", label: "Settings", icon: "⚙️" },
       { href: "/dashboard/admin/field-config", label: "Field Configuration", icon: "🔧", permissions: ["*"] },
