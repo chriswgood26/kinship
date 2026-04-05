@@ -20,7 +20,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { charge_ids } = body as { charge_ids: string[] };
+  const { charge_ids, clearinghouse = "office_ally" } = body as {
+    charge_ids: string[];
+    clearinghouse?: string;
+  };
 
   if (!Array.isArray(charge_ids) || charge_ids.length === 0) {
     return NextResponse.json({ error: "charge_ids array is required" }, { status: 400 });
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
       charge_ids: submittedChargeIds,
       submission_date: now,
       status: submissionResult.success ? "submitted" : "failed",
-      clearinghouse: "office_ally",
+      clearinghouse,
       submission_id: submissionResult.submissionId || null,
       control_number: submissionResult.controlNumber || null,
       edi_content: combinedEdi,

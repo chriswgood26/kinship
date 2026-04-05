@@ -40,6 +40,34 @@ interface Charge {
   client?: { first_name: string; last_name: string; mrn?: string };
 }
 
+interface PayerClearinghouseId {
+  id: string;
+  clearinghouse: string;
+  clearinghouse_payer_id: string;
+  is_default: boolean;
+}
+
+interface Payer {
+  id: string;
+  name: string;
+  payer_type: string;
+  clearinghouse_ids: PayerClearinghouseId[];
+}
+
+const CLEARINGHOUSES = [
+  { id: "office_ally",       label: "Office Ally" },
+  { id: "availity",          label: "Availity" },
+  { id: "change_healthcare", label: "Change Healthcare" },
+  { id: "waystar",           label: "Waystar" },
+] as const;
+
+const CH_LABEL: Record<string, string> = {
+  office_ally:       "Office Ally",
+  availity:          "Availity",
+  change_healthcare: "Change Healthcare",
+  waystar:           "Waystar",
+};
+
 const STATUS_COLORS: Record<string, string> = {
   submitted: "bg-blue-100 text-blue-700",
   acknowledged: "bg-emerald-100 text-emerald-700",
@@ -64,6 +92,10 @@ export default function ClearinghousePage() {
   const [posting, setPosting] = useState(false);
   const [polling, setPolling] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // Clearinghouse selection for claim submission
+  const [selectedClearinghouse, setSelectedClearinghouse] = useState("office_ally");
+  const [payers, setPayers] = useState<Payer[]>([]);
 
   const showNotice = (type: "success" | "error", msg: string) => {
     setNotice({ type, msg });
@@ -99,10 +131,17 @@ export default function ClearinghousePage() {
   const loadPendingCharges = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/billing?status=pending&limit=100", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
+      const [chargesRes, payersRes] = await Promise.all([
+        fetch("/api/billing?status=pending&limit=100", { credentials: "include" }),
+        fetch("/api/payers", { credentials: "include" }),
+      ]);
+      if (chargesRes.ok) {
+        const data = await chargesRes.json();
         setPendingCharges(data.charges || []);
+      }
+      if (payersRes.ok) {
+        const data = await payersRes.json();
+        setPayers(data.payers || []);
       }
     } finally {
       setLoading(false);
@@ -164,11 +203,17 @@ export default function ClearinghousePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ charge_ids: Array.from(selectedChargeIds) }),
+        body: JSON.stringify({
+          charge_ids: Array.from(selectedChargeIds),
+          clearinghouse: selectedClearinghouse,
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        showNotice("success", `${data.chargesSubmitted} claim(s) submitted to Office Ally.`);
+        showNotice(
+          "success",
+          `${data.chargesSubmitted} claim(s) submitted to ${CH_LABEL[selectedClearinghouse] || selectedClearinghouse}.`
+        );
         setSelectedChargeIds(new Set());
         await loadPendingCharges();
       } else {
@@ -406,25 +451,61 @@ export default function ClearinghousePage() {
       {/* ── Submit Claims ── */}
       {tab === "submit" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-600">
-              Select pending charges to batch-submit as 837P claims to Office Ally.
-            </p>
-            <div className="flex gap-2">
-              {pendingCharges.length > 0 && (
-                <>
-                  <button onClick={selectAll} className="text-xs text-teal-600 hover:underline">Select all</button>
-                  <span className="text-slate-300">|</span>
-                  <button onClick={clearAll} className="text-xs text-slate-500 hover:underline">Clear</button>
-                </>
-              )}
-              <button
-                onClick={submitClaims}
-                disabled={submitting || selectedChargeIds.size === 0}
-                className="bg-teal-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50 transition-colors"
-              >
-                {submitting ? "Submitting…" : `Submit ${selectedChargeIds.size > 0 ? selectedChargeIds.size : ""} Claim(s)`}
-              </button>
+          {/* Clearinghouse selector + submit controls */}
+          <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4">
+            <div className="flex flex-wrap items-end gap-4 justify-between">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
+                  Route claims to clearinghouse
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {CLEARINGHOUSES.map(ch => (
+                    <button
+                      key={ch.id}
+                      onClick={() => setSelectedClearinghouse(ch.id)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                        selectedClearinghouse === ch.id
+                          ? "bg-teal-500 text-white border-teal-500"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-teal-300"
+                      }`}
+                    >
+                      {ch.label}
+                    </button>
+                  ))}
+                </div>
+                {payers.length > 0 && (
+                  <p className="text-xs text-slate-400 mt-2">
+                    {payers.filter(p =>
+                      p.clearinghouse_ids?.some(c => c.clearinghouse === selectedClearinghouse)
+                    ).length} of {payers.length} payers have a{" "}
+                    <span className="font-medium">{CH_LABEL[selectedClearinghouse]}</span> payer ID configured.{" "}
+                    <Link
+                      href="/dashboard/admin/payers"
+                      className="text-teal-600 hover:underline"
+                    >
+                      Manage payer IDs →
+                    </Link>
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2 items-center">
+                {pendingCharges.length > 0 && (
+                  <>
+                    <button onClick={selectAll} className="text-xs text-teal-600 hover:underline">Select all</button>
+                    <span className="text-slate-300">|</span>
+                    <button onClick={clearAll} className="text-xs text-slate-500 hover:underline">Clear</button>
+                  </>
+                )}
+                <button
+                  onClick={submitClaims}
+                  disabled={submitting || selectedChargeIds.size === 0}
+                  className="bg-teal-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50 transition-colors"
+                >
+                  {submitting
+                    ? "Submitting…"
+                    : `Submit ${selectedChargeIds.size > 0 ? selectedChargeIds.size : ""} to ${CH_LABEL[selectedClearinghouse]}`}
+                </button>
+              </div>
             </div>
           </div>
 

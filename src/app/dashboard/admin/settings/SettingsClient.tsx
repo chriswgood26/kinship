@@ -419,6 +419,21 @@ export default function SettingsClient({ org }: Props) {
             {renderField("Clearinghouse", billingForm.clearinghouse)}
           </div>
         )}
+        {/* Quick-links for billing configuration */}
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/admin/clearinghouse"
+            className="text-xs text-teal-600 font-semibold border border-teal-200 px-3 py-1.5 rounded-lg hover:bg-teal-50 transition-colors"
+          >
+            🔌 Clearinghouse Setup →
+          </Link>
+          <Link
+            href="/dashboard/admin/payers"
+            className="text-xs text-teal-600 font-semibold border border-teal-200 px-3 py-1.5 rounded-lg hover:bg-teal-50 transition-colors"
+          >
+            🏥 Payer Management →
+          </Link>
+        </div>
       </div>
 
       {/* Stripe Connect */}
