@@ -17,6 +17,7 @@ function formatPhone(value: string): string {
 
 function addDays(dateStr: string, days: number, businessDaysOnly: boolean): string {
   if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return "";
+  if (!days || isNaN(days) || days <= 0) return "";
   const date = new Date(dateStr + "T12:00:00");
   if (isNaN(date.getTime())) return "";
   if (!businessDaysOnly) {
@@ -41,7 +42,7 @@ function NewReferralForm() {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
 
-  const [referralDueDays, setReferralDueDays] = useState<{ days: number; business_days: boolean } | null>(null);
+  const [referralDueDays, setReferralDueDays] = useState<{ referral_due_days: number; referral_due_business_days: boolean } | null>(null);
   const today = new Date().toISOString().split("T")[0];
 
   // Fetch org referral settings
@@ -314,7 +315,7 @@ function NewReferralForm() {
             setForm(f => ({
               ...f,
               referral_date: newDate,
-              due_date: newDate && referralDueDays ? addDays(newDate, referralDueDays.days, referralDueDays.business_days) : f.due_date,
+              due_date: newDate && referralDueDays ? addDays(newDate, referralDueDays.referral_due_days, referralDueDays.referral_due_business_days) : f.due_date,
             }));
           }} className={inputClass} /></div>
           <div><label className={labelClass}>Due / Response By</label><input type="date" value={form.due_date} onChange={e => set("due_date", e.target.value)} className={inputClass} /></div>
