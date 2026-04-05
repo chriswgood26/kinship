@@ -4,6 +4,7 @@ import { useTerminology } from "@/components/TerminologyProvider";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PayerSelect from "@/components/PayerSelect";
 
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC"];
 
@@ -258,7 +259,12 @@ export default function NewPatientForm({ prefill = {}, referralId }: { prefill?:
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className={labelClass}>Insurance Provider</label>
-                  <input type="text" value={form.insurance_provider} onChange={e => set("insurance_provider", e.target.value)} className={inputClass} placeholder="e.g. Regence BlueShield" />
+                  <PayerSelect
+                    value={form.insurance_provider}
+                    onChange={v => set("insurance_provider", v)}
+                    placeholder="Select payer…"
+                    inputClass={inputClass}
+                  />
                 </div>
                 <div>
                   <label className={labelClass}>Member ID</label>
@@ -279,7 +285,12 @@ export default function NewPatientForm({ prefill = {}, referralId }: { prefill?:
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className={labelClass}>Insurance Provider</label>
-                    <input type="text" value={form.insurance_secondary_provider} onChange={e => set("insurance_secondary_provider", e.target.value)} className={inputClass} placeholder="Secondary insurance provider" />
+                    <PayerSelect
+                      value={form.insurance_secondary_provider}
+                      onChange={v => set("insurance_secondary_provider", v)}
+                      placeholder="Select secondary payer…"
+                      inputClass={inputClass}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Member ID</label>
@@ -301,7 +312,12 @@ export default function NewPatientForm({ prefill = {}, referralId }: { prefill?:
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className={labelClass}>Insurance Provider</label>
-                    <input type="text" value={form.insurance_tertiary_provider} onChange={e => set("insurance_tertiary_provider", e.target.value)} className={inputClass} placeholder="Tertiary insurance provider" />
+                    <PayerSelect
+                      value={form.insurance_tertiary_provider}
+                      onChange={v => set("insurance_tertiary_provider", v)}
+                      placeholder="Select tertiary payer…"
+                      inputClass={inputClass}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Member ID</label>

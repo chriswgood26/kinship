@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import ICD10Input from "@/components/ICD10Input";
+import PayerSelect from "@/components/PayerSelect";
 
 interface Patient { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null; insurance_provider?: string | null; insurance_member_id?: string | null; }
 
@@ -138,7 +139,13 @@ function NewAuthForm() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Insurance Provider *</label>
-            <input value={form.insurance_provider} onChange={e => set("insurance_provider", e.target.value)} className={inputClass} placeholder="e.g. Regence BlueShield" />
+            <PayerSelect
+              value={form.insurance_provider}
+              onChange={v => set("insurance_provider", v)}
+              required
+              placeholder="Select payer…"
+              inputClass={inputClass}
+            />
           </div>
           <div>
             <label className={labelClass}>Member ID</label>

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PayerSelect from "@/components/PayerSelect";
 
 export default function EditPatientForm({ patient }: { patient: Record<string, string | null> }) {
   const router = useRouter();
@@ -162,7 +163,7 @@ export default function EditPatientForm({ patient }: { patient: Record<string, s
 
           {/* Insurance section header */}
           <div className="col-span-2 pt-2"><h3 className="font-semibold text-slate-700 text-sm mb-3">Emergency Contact & Insurance</h3></div>
-          <div><label className={labelClass}>Insurance Provider</label><input value={form.insurance_provider} onChange={e => set("insurance_provider", e.target.value)} className={inputClass} placeholder="e.g. Regence BlueShield" /></div>
+          <div><label className={labelClass}>Insurance Provider</label><PayerSelect value={form.insurance_provider} onChange={v => set("insurance_provider", v)} placeholder="Select payer…" inputClass={inputClass} /></div>
           <div><label className={labelClass}>Member ID</label><input value={form.insurance_member_id} onChange={e => set("insurance_member_id", e.target.value)} className={inputClass} placeholder="Member ID number" /></div>
           <div><label className={labelClass}>Group Number</label><input value={form.insurance_group_number} onChange={e => set("insurance_group_number", e.target.value)} className={inputClass} placeholder="Group #" /></div>
           <div><label className={labelClass}>Prior Auth Number</label><input value={form.insurance_auth_number} onChange={e => set("insurance_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" /></div>
@@ -188,14 +189,14 @@ export default function EditPatientForm({ patient }: { patient: Record<string, s
           <div className="col-span-2 pt-2 border-t border-slate-100">
             <h3 className="font-semibold text-slate-700 text-sm mb-3">Secondary Insurance <span className="text-slate-400 font-normal">(optional)</span></h3>
           </div>
-          <div><label className={labelClass}>Secondary Provider</label><input value={form.insurance_secondary_provider} onChange={e => set("insurance_secondary_provider", e.target.value)} className={inputClass} placeholder="Secondary insurance" /></div>
+          <div><label className={labelClass}>Secondary Provider</label><PayerSelect value={form.insurance_secondary_provider} onChange={v => set("insurance_secondary_provider", v)} placeholder="Select secondary payer…" inputClass={inputClass} /></div>
           <div><label className={labelClass}>Secondary Member ID</label><input value={form.insurance_secondary_member_id} onChange={e => set("insurance_secondary_member_id", e.target.value)} className={inputClass} placeholder="Member ID" /></div>
           <div><label className={labelClass}>Secondary Group Number</label><input value={(form as {insurance_secondary_group_number?: string}).insurance_secondary_group_number || ""} onChange={e => set("insurance_secondary_group_number", e.target.value)} className={inputClass} placeholder="Group #" /></div>
           <div><label className={labelClass}>Secondary Prior Auth</label><input value={(form as {insurance_secondary_auth_number?: string}).insurance_secondary_auth_number || ""} onChange={e => set("insurance_secondary_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" /></div>
           <div className="col-span-2 pt-2 border-t border-slate-100">
             <h3 className="font-semibold text-slate-700 text-sm mb-3">Tertiary Insurance <span className="text-slate-400 font-normal">(optional)</span></h3>
           </div>
-          <div><label className={labelClass}>Tertiary Provider</label><input value={(form as {insurance_tertiary_provider?: string}).insurance_tertiary_provider || ""} onChange={e => set("insurance_tertiary_provider", e.target.value)} className={inputClass} placeholder="Tertiary insurance" /></div>
+          <div><label className={labelClass}>Tertiary Provider</label><PayerSelect value={(form as {insurance_tertiary_provider?: string}).insurance_tertiary_provider || ""} onChange={v => set("insurance_tertiary_provider", v)} placeholder="Select tertiary payer…" inputClass={inputClass} /></div>
           <div><label className={labelClass}>Tertiary Member ID</label><input value={(form as {insurance_tertiary_member_id?: string}).insurance_tertiary_member_id || ""} onChange={e => set("insurance_tertiary_member_id", e.target.value)} className={inputClass} placeholder="Member ID" /></div>
           <div><label className={labelClass}>Tertiary Group Number</label><input value={(form as {insurance_tertiary_group_number?: string}).insurance_tertiary_group_number || ""} onChange={e => set("insurance_tertiary_group_number", e.target.value)} className={inputClass} placeholder="Group #" /></div>
           <div><label className={labelClass}>Tertiary Prior Auth</label><input value={(form as {insurance_tertiary_auth_number?: string}).insurance_tertiary_auth_number || ""} onChange={e => set("insurance_tertiary_auth_number", e.target.value)} className={inputClass} placeholder="PA-XXXX-XXXXX" /></div>

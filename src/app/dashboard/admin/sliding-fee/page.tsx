@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { DEFAULT_SFS_TIERS, FPL_YEAR, PROGRAM_AREA_OPTIONS, PAYER_EXCLUSION_REASONS, type SFSTier, type SFSProgramOverride, type SFSServiceOverride, type SFSGrantSchedule, type SFSPayerExclusion } from "@/lib/fpl";
+import PayerSelect from "@/components/PayerSelect";
 
 type Tab = "base" | "programs" | "services" | "grants" | "payers" | "retro";
 
@@ -656,7 +657,13 @@ function PayerExclusionsTab() {
           <div className="grid grid-cols-4 gap-4 items-end">
             <div className="col-span-1">
               <label className="text-xs font-semibold text-slate-500 block mb-1">Payer Name *</label>
-              <input value={form.payer_name} onChange={e => setForm(p => ({ ...p, payer_name: e.target.value }))} className={inputClass} placeholder="Regence BlueCross BlueShield" />
+              <PayerSelect
+                value={form.payer_name}
+                onChange={v => setForm(p => ({ ...p, payer_name: v }))}
+                placeholder="Select payer…"
+                inputClass={inputClass}
+                required
+              />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 block mb-1">Payer ID (optional)</label>

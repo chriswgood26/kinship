@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import PayerSelect from "@/components/PayerSelect";
 
 /* ──────────────────────────────────────── types ── */
 interface Client {
@@ -454,11 +455,11 @@ function LogDenialModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1">Payer Name</label>
-              <input
+              <PayerSelect
                 value={payerName}
-                onChange={e => setPayerName(e.target.value)}
-                placeholder="e.g. BlueCross BlueShield"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                onChange={v => setPayerName(v)}
+                placeholder="Select payer…"
+                inputClass="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               />
             </div>
             <div>
