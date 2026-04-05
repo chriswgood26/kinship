@@ -26,6 +26,7 @@ interface Org {
   plan?: string | null;
   addons?: string[] | null;
   requested_plan?: string | null;
+  restrict_to_credentialed_payers?: boolean | null;
 }
 
 interface OrgForm {
@@ -138,10 +139,11 @@ const MODULES: SettingsModule[] = [
     id: "billing",
     icon: "💰",
     title: "Billing",
-    description: "Billing contacts and financial settings",
-    keywords: ["billing", "invoice", "payment", "financial", "claims", "revenue", "payer"],
+    description: "Billing contacts, financial settings, and payer validation",
+    keywords: ["billing", "invoice", "payment", "financial", "claims", "revenue", "payer", "credentialed", "restrict", "validation"],
     settings: [
       { key: "billing_email", label: "Billing Email", description: "Where billing notifications and invoices are sent", keywords: ["invoice", "email", "notification"] },
+      { key: "restrict_to_credentialed_payers", label: "Restrict to Credentialed Payers", description: "Only allow selecting payers that have been set up in Payer Management", keywords: ["payer", "credentialed", "restrict", "validation", "insurance"] },
     ],
   },
   {
@@ -223,6 +225,7 @@ export default function SettingsClient({ org, userRoles = ["clinician"] }: { org
     default_session_duration: "60",
     timezone: "America/New_York",
     billing_email: "",
+    restrict_to_credentialed_payers: org?.restrict_to_credentialed_payers ?? false,
   });
 
   // Plan state
@@ -526,11 +529,59 @@ export default function SettingsClient({ org, userRoles = ["clinician"] }: { org
             placeholder="billing@yourorg.org" />
         </div>
 
+        <div className="px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <label className={labelClass}>Payer Validation — Restrict to Credentialed Payers</label>
+              <p className="text-xs text-slate-400 mt-0.5">
+                When enabled, staff can only select payers that have been configured in{" "}
+                <a href="/dashboard/admin/payers" target="_blank" rel="noreferrer" className="text-teal-600 hover:underline">Payer Management</a>.
+                Free-text entry of unknown payers will be blocked. When disabled, staff can enter any payer name but
+                will see a warning badge if the payer is not in the credentialed list.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={extForm.restrict_to_credentialed_payers}
+              onClick={() => isAdmin && setExtForm(f => ({ ...f, restrict_to_credentialed_payers: !f.restrict_to_credentialed_payers }))}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${extForm.restrict_to_credentialed_payers ? "bg-teal-500" : "bg-slate-200"} ${!isAdmin ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${extForm.restrict_to_credentialed_payers ? "translate-x-5" : "translate-x-0"}`}
+              />
+            </button>
+          </div>
+          {extForm.restrict_to_credentialed_payers && (
+            <div className="mt-3 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-start gap-2">
+              <span className="mt-0.5 flex-shrink-0">🔒</span>
+              <span>
+                <strong>Restriction is ON.</strong> Staff will only be able to select payers from your credentialed payer list.
+                Make sure all payers you bill are added in{" "}
+                <a href="/dashboard/admin/payers" target="_blank" rel="noreferrer" className="underline hover:text-amber-900">Payer Management</a>.
+              </span>
+            </div>
+          )}
+          {!extForm.restrict_to_credentialed_payers && (
+            <div className="mt-3 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 flex items-start gap-2">
+              <span className="mt-0.5 flex-shrink-0">ℹ️</span>
+              <span>
+                <strong>Open entry is ON.</strong> Staff can enter any payer name. A &quot;Not credentialed&quot; warning will appear
+                for payers not in your credentialed list, but selection will not be blocked.
+              </span>
+            </div>
+          )}
+        </div>
+
         <div className="px-6 py-4 bg-slate-50 flex items-center justify-between">
           {saved.billing ? <span className="text-sm text-emerald-600 font-medium">✅ Saved</span> : <span />}
           {isAdmin && (
             <button
-              onClick={() => saveModule("billing", { billing_email: extForm.billing_email })}
+              onClick={() => saveModule("billing", {
+                billing_email: extForm.billing_email,
+                restrict_to_credentialed_payers: extForm.restrict_to_credentialed_payers,
+              })}
               disabled={saving.billing}
               className="bg-teal-500 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 disabled:opacity-50">
               {saving.billing ? "Saving…" : "Save Billing Settings"}

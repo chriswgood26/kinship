@@ -27,6 +27,9 @@ create table if not exists organizations (
 -- Migration: add requested_plan column if not exists
 -- alter table organizations add column if not exists requested_plan text;
 
+-- Migration: add payer validation / restriction setting
+alter table organizations add column if not exists restrict_to_credentialed_payers boolean default false;
+
 -- User profiles
 create table if not exists user_profiles (
   id uuid primary key default gen_random_uuid(),

@@ -17,17 +17,28 @@ export async function GET() {
     return NextResponse.json({ error: "Organization not found" }, { status: 403 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("payers")
-    .select(`
-      *,
-      clearinghouse_ids:payer_clearinghouse_ids(*)
-    `)
-    .eq("organization_id", orgId)
-    .order("name");
+  const [payersResult, orgResult] = await Promise.all([
+    supabaseAdmin
+      .from("payers")
+      .select(`
+        *,
+        clearinghouse_ids:payer_clearinghouse_ids(*)
+      `)
+      .eq("organization_id", orgId)
+      .order("name"),
+    supabaseAdmin
+      .from("organizations")
+      .select("restrict_to_credentialed_payers")
+      .eq("id", orgId)
+      .single(),
+  ]);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ payers: data || [] });
+  if (payersResult.error) return NextResponse.json({ error: payersResult.error.message }, { status: 500 });
+
+  return NextResponse.json({
+    payers: payersResult.data || [],
+    restrict_to_credentialed_payers: orgResult.data?.restrict_to_credentialed_payers ?? false,
+  });
 }
 
 export async function POST(req: NextRequest) {
