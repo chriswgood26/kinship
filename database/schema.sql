@@ -1048,3 +1048,22 @@ create index if not exists idx_ccbhc_pps_claims_status on ccbhc_pps_claims(statu
 create unique index if not exists idx_ccbhc_pps_claims_unique
   on ccbhc_pps_claims(organization_id, client_id, period_start, period_end)
   where status != 'void';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- HIPAA Privacy Notice Acknowledgments
+-- ─────────────────────────────────────────────────────────────────────────────
+-- HIPAA privacy notice acknowledgments are tracked using the existing
+-- consent_forms table with form_type = 'hipaa_notice'.
+-- The /dashboard/privacy-notices page provides a compliance-focused view
+-- showing per-client acknowledgment status, annual renewal tracking, and
+-- a list of patients who have never received or have an expired NPP.
+--
+-- The consent_forms table already supports all required fields:
+--   - client_id, organization_id (multi-tenant scoping)
+--   - status: signed | pending_signature | declined | expired | revoked
+--   - signed_at, signed_by, guardian_name (who signed)
+--   - signature_method: written | electronic | verbal_documented
+--   - expiration_date (set to 1 year from signing for annual renewal tracking)
+--   - witnessed_by, notes
+--
+-- No additional migration needed — uses existing consent_forms table.
