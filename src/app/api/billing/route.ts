@@ -67,6 +67,8 @@ export async function POST(req: NextRequest) {
     cpt_description: body.cpt_description || null,
     icd10_codes: body.icd10_codes || [],
     units: body.units || 1,
+    unit_rate: body.unit_rate ? parseFloat(body.unit_rate) : null,
+    modifier: body.modifier || null,
     charge_amount: body.charge_amount ? parseFloat(body.charge_amount) : null,
     notes: body.notes || null,
     status: "pending",

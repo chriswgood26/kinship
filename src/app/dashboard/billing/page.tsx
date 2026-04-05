@@ -27,7 +27,7 @@ export default async function BillingPage({
 
   let query = supabaseAdmin
     .from("charges")
-    .select("*, client:client_id(first_name, last_name, mrn), encounter:encounter_id(id, encounter_date, encounter_type)")
+    .select("*, client:client_id(first_name, last_name, mrn), encounter:encounter_id(id, encounter_date, encounter_type), unit_rate, modifier")
     .eq("organization_id", orgId)
     .order("service_date", { ascending: false })
     .limit(50);
@@ -117,8 +117,14 @@ export default async function BillingPage({
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">{charge.service_date ? new Date(charge.service_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
                     <td className="px-4 py-4">
-                      <div className="font-mono font-bold text-sm text-slate-900">{charge.cpt_code}</div>
+                      <div className="font-mono font-bold text-sm text-slate-900">
+                        {charge.cpt_code}
+                        {charge.modifier && <span className="ml-1 text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono">{charge.modifier}</span>}
+                      </div>
                       {charge.cpt_description && <div className="text-xs text-slate-400">{charge.cpt_description}</div>}
+                      {charge.unit_rate && charge.units > 1 && (
+                        <div className="text-xs text-indigo-500">{charge.units} units × ${Number(charge.unit_rate).toFixed(2)}</div>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-xs font-mono text-slate-500">{charge.icd10_codes?.slice(0,2).join(", ") || "—"}</td>
                     <td className="px-4 py-4">

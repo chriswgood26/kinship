@@ -381,6 +381,10 @@ alter table charges add column if not exists paid_amount decimal(10,2);
 alter table charges add column if not exists era_remittance_id uuid;
 alter table charges add column if not exists posted_at timestamptz;
 
+-- HCBS/DD waiver unit-based billing columns
+alter table charges add column if not exists unit_rate decimal(10,2);
+alter table charges add column if not exists modifier text; -- e.g. HQ, HN, HO, HP, TF, U1-U8
+
 -- Claim submissions to clearinghouse (837P/I)
 create table if not exists clearinghouse_submissions (
   id uuid primary key default gen_random_uuid(),

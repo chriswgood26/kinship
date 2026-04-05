@@ -56,4 +56,47 @@ export const DEFAULT_CHARGES: Record<string, { cpt_code: string; cpt_description
     charge_amount: 35.00,
     units: 1,
   },
+  // HCBS/DD waiver encounter types (unit-based)
+  personal_care: {
+    cpt_code: "T1019",
+    cpt_description: "Personal care services, per 15 minutes",
+    charge_amount: 8.50,
+    units: 1,
+  },
+  day_habilitation: {
+    cpt_code: "T2019",
+    cpt_description: "Day habilitation, per 15 minutes",
+    charge_amount: 6.50,
+    units: 1,
+  },
+  residential_habilitation: {
+    cpt_code: "T2021",
+    cpt_description: "Residential habilitation, per 15 minutes",
+    charge_amount: 7.50,
+    units: 1,
+  },
+  supported_employment: {
+    cpt_code: "T2025",
+    cpt_description: "Supported employment, follow-along, per 15 minutes",
+    charge_amount: 6.00,
+    units: 1,
+  },
+  skills_training: {
+    cpt_code: "H2014",
+    cpt_description: "Skills training and development, per 15 minutes",
+    charge_amount: 9.00,
+    units: 1,
+  },
+  community_support: {
+    cpt_code: "H2015",
+    cpt_description: "Comprehensive community support, per 15 minutes",
+    charge_amount: 9.50,
+    units: 1,
+  },
+  therapeutic_behavioral: {
+    cpt_code: "H2019",
+    cpt_description: "Therapeutic behavioral services, per 15 minutes",
+    charge_amount: 10.00,
+    units: 1,
+  },
 };

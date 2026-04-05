@@ -1,6 +1,8 @@
 // Billing Rules Engine — DrCloud Neo
 // Validates charges before submission to reduce denials
 
+import { HCBS_CODE_MAP, isHcbsCode } from "./hcbsCodes";
+
 export interface ChargeInput {
   client_id: string;
   service_date: string;
@@ -10,6 +12,8 @@ export interface ChargeInput {
   charge_amount?: number;
   insurance_provider?: string;
   auth_number?: string;
+  modifier?: string;
+  unit_rate?: number;
 }
 
 export interface RuleResult {
@@ -161,6 +165,46 @@ export function validateCharge(charge: ChargeInput): ValidationResult {
       field: "service_date",
       message: `Charge is ${daysSince} days old. Many payers have 90-180 day timely filing limits. Submit promptly.`,
     });
+  }
+
+  // Rule 9: HCBS/DD waiver unit limits
+  if (isHcbsCode(charge.cpt_code)) {
+    const hcbsCode = HCBS_CODE_MAP[charge.cpt_code];
+    if (hcbsCode.max_units_per_day !== null && charge.units > hcbsCode.max_units_per_day) {
+      errors.push({
+        code: "BL009",
+        severity: "error",
+        field: "units",
+        message: `${charge.cpt_code} (${hcbsCode.unit_label}): ${charge.units} units exceeds typical daily maximum of ${hcbsCode.max_units_per_day} units for this HCBS waiver code.`,
+      });
+    }
+  }
+
+  // Rule 10: HCBS modifier requirement
+  if (isHcbsCode(charge.cpt_code)) {
+    const hcbsCode = HCBS_CODE_MAP[charge.cpt_code];
+    if (hcbsCode.requires_modifier && !charge.modifier) {
+      warnings.push({
+        code: "BL010",
+        severity: "warning",
+        field: "modifier",
+        message: `${charge.cpt_code} typically requires a modifier (e.g., HN, HO, HP for staff qualification level). Add a modifier before submitting.`,
+      });
+    }
+  }
+
+  // Rule 11: HCBS unit_rate vs charge_amount consistency
+  if (isHcbsCode(charge.cpt_code) && charge.unit_rate && charge.charge_amount) {
+    const expected = Math.round(charge.unit_rate * charge.units * 100) / 100;
+    const actual = Math.round(charge.charge_amount * 100) / 100;
+    if (Math.abs(expected - actual) > 0.02) {
+      warnings.push({
+        code: "BL011",
+        severity: "warning",
+        field: "charge_amount",
+        message: `Charge amount ($${actual.toFixed(2)}) does not match unit rate × units ($${charge.unit_rate.toFixed(2)} × ${charge.units} = $${expected.toFixed(2)}). Verify before submitting.`,
+      });
+    }
   }
 
   return {
