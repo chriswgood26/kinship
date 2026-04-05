@@ -27,7 +27,7 @@ export default async function BillingPage({
 
   let query = supabaseAdmin
     .from("charges")
-    .select("*, client:client_id(first_name, last_name, mrn)")
+    .select("*, client:client_id(first_name, last_name, mrn), encounter:encounter_id(id, encounter_date, encounter_type)")
     .eq("organization_id", orgId)
     .order("service_date", { ascending: false })
     .limit(50);
@@ -100,6 +100,7 @@ export default async function BillingPage({
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">CPT</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Diagnoses</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Encounter</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
               </tr>
@@ -107,6 +108,7 @@ export default async function BillingPage({
             <tbody className="divide-y divide-slate-50">
               {charges.map(charge => {
                 const client = Array.isArray(charge.client) ? charge.client[0] : charge.client;
+                const encounter = Array.isArray(charge.encounter) ? charge.encounter[0] : charge.encounter;
                 return (
                   <tr key={charge.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-4">
@@ -119,6 +121,16 @@ export default async function BillingPage({
                       {charge.cpt_description && <div className="text-xs text-slate-400">{charge.cpt_description}</div>}
                     </td>
                     <td className="px-4 py-4 text-xs font-mono text-slate-500">{charge.icd10_codes?.slice(0,2).join(", ") || "—"}</td>
+                    <td className="px-4 py-4">
+                      {encounter ? (
+                        <Link href={`/dashboard/encounters/${encounter.id}`} className="text-xs text-teal-600 hover:text-teal-800 font-medium">
+                          {encounter.encounter_type || "Encounter"}<br />
+                          <span className="text-slate-400 font-normal">{encounter.encounter_date}</span>
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-4 text-sm font-semibold text-slate-900">{charge.charge_amount ? `$${Number(charge.charge_amount).toFixed(2)}` : "—"}</td>
                     <td className="px-4 py-4">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${STATUS_COLORS[charge.status] || STATUS_COLORS.pending}`}>{charge.status}</span>

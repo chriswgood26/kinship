@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 interface Client { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null; }
+interface Encounter { id: string; encounter_date: string; encounter_type: string | null; client_id: string; }
 
 const CPT_CODES = [
   { code: "90837", desc: "Individual therapy, 60 min", amount: 175 },
@@ -29,9 +30,11 @@ function NewChargeForm() {
   const [clientSearch, setClientSearch] = useState("");
   const [showCPT, setShowCPT] = useState(false);
   const [cptSearch, setCptSearch] = useState("");
+  const [encounter, setEncounter] = useState<Encounter | null>(null);
 
   const [form, setForm] = useState({
     client_id: "", client_name: "",
+    encounter_id: "",
     service_date: new Date().toISOString().split("T")[0],
     cpt_code: "", cpt_description: "", charge_amount: "",
     icd10_codes: "", units: 1, notes: "",
@@ -39,7 +42,25 @@ function NewChargeForm() {
 
   useEffect(() => {
     const cid = params.get("client_id");
-    if (cid) {
+    const eid = params.get("encounter_id");
+
+    if (eid) {
+      // Load encounter and pre-fill client + date
+      fetch(`/api/encounters/${eid}`, { credentials: "include" }).then(r => r.json()).then(d => {
+        if (d.encounter) {
+          const enc = d.encounter;
+          setEncounter(enc);
+          const client = Array.isArray(enc.client) ? enc.client[0] : enc.client;
+          setForm(f => ({
+            ...f,
+            encounter_id: enc.id,
+            service_date: enc.encounter_date,
+            client_id: enc.client_id,
+            client_name: client ? `${client.last_name}, ${client.first_name}` : "",
+          }));
+        }
+      });
+    } else if (cid) {
       fetch(`/api/clients/${cid}`, { credentials: "include" }).then(r => r.json()).then(d => {
         if (d.client) setForm(f => ({ ...f, client_id: d.client.id, client_name: `${d.client.last_name}, ${d.client.first_name}` }));
       });
@@ -61,11 +82,20 @@ function NewChargeForm() {
     setSaving(true);
     const res = await fetch("/api/billing", {
       method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-      body: JSON.stringify({ ...form, icd10_codes: form.icd10_codes.split(",").map(s => s.trim()).filter(Boolean) }),
+      body: JSON.stringify({
+        ...form,
+        encounter_id: form.encounter_id || null,
+        icd10_codes: form.icd10_codes.split(",").map(s => s.trim()).filter(Boolean),
+      }),
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Failed"); setSaving(false); return; }
-    router.push("/dashboard/billing");
+    // Return to encounter if we came from one, otherwise billing list
+    if (form.encounter_id) {
+      router.push(`/dashboard/encounters/${form.encounter_id}`);
+    } else {
+      router.push("/dashboard/billing");
+    }
   }
 
   const inputClass = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500";
@@ -74,9 +104,24 @@ function NewChargeForm() {
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/dashboard/billing" className="text-slate-400 hover:text-slate-700">←</Link>
+        <Link href={encounter ? `/dashboard/encounters/${encounter.id}` : "/dashboard/billing"} className="text-slate-400 hover:text-slate-700">←</Link>
         <h1 className="text-2xl font-bold text-slate-900">Add Charge</h1>
       </div>
+
+      {/* Encounter context banner */}
+      {encounter && (
+        <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 flex items-center justify-between">
+          <div>
+            <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide">Linked Encounter</div>
+            <div className="text-sm text-teal-900 font-medium mt-0.5">
+              {encounter.encounter_type || "Encounter"} · {encounter.encounter_date}
+            </div>
+          </div>
+          <Link href={`/dashboard/encounters/${encounter.id}`} className="text-xs text-teal-600 hover:text-teal-800 font-medium">
+            View Encounter →
+          </Link>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
         {/* Client */}

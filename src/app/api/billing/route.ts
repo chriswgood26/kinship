@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabaseAdmin.from("charges").insert({
     organization_id: orgId,
     client_id: body.client_id,
+    encounter_id: body.encounter_id || null,
     service_date: body.service_date,
     cpt_code: body.cpt_code,
     cpt_description: body.cpt_description || null,

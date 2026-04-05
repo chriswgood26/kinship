@@ -7,15 +7,24 @@ import NoteAmendmentPanel from "./NoteAmendmentPanel";
 
 export const dynamic = "force-dynamic";
 
+const CHARGE_STATUS_COLORS: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  submitted: "bg-blue-100 text-blue-700",
+  paid: "bg-emerald-100 text-emerald-700",
+  denied: "bg-red-100 text-red-600",
+  void: "bg-slate-100 text-slate-500",
+};
+
 export default async function EncounterDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
   if (!user) redirect("/sign-in");
 
   const { id } = await params;
 
-  const [{ data: encounter }, { data: notes }] = await Promise.all([
+  const [{ data: encounter }, { data: notes }, { data: charges }] = await Promise.all([
     supabaseAdmin.from("encounters").select("*, client:client_id(id, first_name, last_name, mrn, preferred_name, insurance_provider)").eq("id", id).single(),
     supabaseAdmin.from("clinical_notes").select("*").eq("encounter_id", id).order("created_at", { ascending: false }),
+    supabaseAdmin.from("charges").select("id, cpt_code, cpt_description, charge_amount, status, units, icd10_codes").eq("encounter_id", id).order("created_at", { ascending: false }),
   ]);
 
   if (!encounter) notFound();
@@ -62,6 +71,60 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
           <span className="text-amber-900">{encounter.chief_complaint}</span>
         </div>
       )}
+
+      {/* Charges */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="font-semibold text-slate-900">Charges</h2>
+          <Link
+            href={`/dashboard/billing/new?encounter_id=${id}`}
+            className="bg-teal-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-teal-400 transition-colors"
+          >
+            + Add Charge
+          </Link>
+        </div>
+        {!charges?.length ? (
+          <div className="px-5 py-6 text-center">
+            <p className="text-sm text-slate-500">No charges linked to this encounter.</p>
+            <Link
+              href={`/dashboard/billing/new?encounter_id=${id}`}
+              className="inline-block mt-3 text-teal-600 text-sm font-medium hover:text-teal-800"
+            >
+              + Add a charge →
+            </Link>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">CPT</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Diagnoses</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Units</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {charges.map(charge => (
+                <tr key={charge.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-3">
+                    <div className="font-mono font-bold text-sm text-slate-900">{charge.cpt_code}</div>
+                    {charge.cpt_description && <div className="text-xs text-slate-400">{charge.cpt_description}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-xs font-mono text-slate-500">{charge.icd10_codes?.slice(0, 2).join(", ") || "—"}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{charge.units ?? 1}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-slate-900">{charge.charge_amount ? `$${Number(charge.charge_amount).toFixed(2)}` : "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${CHARGE_STATUS_COLORS[charge.status] || CHARGE_STATUS_COLORS.pending}`}>
+                      {charge.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       {isSigned && existingNote ? (
         <>
