@@ -4,6 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import SOAPEditor from "./SOAPEditor";
 import NoteAmendmentPanel from "./NoteAmendmentPanel";
+import TimeTracker from "./TimeTracker";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,15 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
           <span className="text-amber-900">{encounter.chief_complaint}</span>
         </div>
       )}
+
+      {/* Time Tracking */}
+      <TimeTracker
+        encounterId={id}
+        initialStartTime={encounter.start_time ?? null}
+        initialEndTime={encounter.end_time ?? null}
+        initialDurationMinutes={encounter.duration_minutes ?? null}
+        initialDurationOverride={encounter.duration_override ?? false}
+      />
 
       {/* Charges */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">

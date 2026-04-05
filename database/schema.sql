@@ -154,6 +154,10 @@ create table if not exists encounters (
   encounter_type text,
   status text default 'in_progress',
   chief_complaint text,
+  start_time time,
+  end_time time,
+  duration_minutes int,
+  duration_override boolean default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
