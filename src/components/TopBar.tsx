@@ -15,9 +15,10 @@ interface Notification {
 
 interface Props {
   user: { firstName: string | null; lastName: string | null; email: string | undefined; roles?: string[]; title?: string | null };
+  orgName?: string;
 }
 
-export default function TopBar({ user }: Props) {
+export default function TopBar({ user, orgName }: Props) {
   const initials = ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || "U";
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "User";
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -84,6 +85,9 @@ export default function TopBar({ user }: Props) {
   return (
     <header className="bg-white px-6 py-3 flex items-center justify-between border-b border-slate-200 no-print">
       <div className="flex items-center gap-3">
+        {orgName && (
+          <div className="text-sm font-semibold text-slate-700">{orgName}</div>
+        )}
         <div className="text-slate-400 text-sm">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
         </div>
