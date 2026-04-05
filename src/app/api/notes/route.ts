@@ -8,13 +8,13 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = await getOrgId(userId);
   const body = await req.json();
-  const { note_id, encounter_id, subjective, objective, assessment, plan, diagnosis_codes, is_signed, signed_at } = body;
+  const { note_id, encounter_id, subjective, objective, assessment, plan, diagnosis_codes, is_signed, signed_at, is_late_note, late_note_reason } = body;
   let data, error;
   if (note_id) {
-    ({ data, error } = await supabaseAdmin.from("clinical_notes").update({ subjective, objective, assessment, plan, diagnosis_codes, is_signed, signed_at, updated_at: new Date().toISOString() }).eq("id", note_id).eq("organization_id", orgId).select().single());
+    ({ data, error } = await supabaseAdmin.from("clinical_notes").update({ subjective, objective, assessment, plan, diagnosis_codes, is_signed, signed_at, is_late_note: is_late_note || false, late_note_reason: late_note_reason || null, updated_at: new Date().toISOString() }).eq("id", note_id).eq("organization_id", orgId).select().single());
     if (is_signed) await supabaseAdmin.from("encounters").update({ status: "signed" }).eq("id", encounter_id).eq("organization_id", orgId);
   } else {
-    ({ data, error } = await supabaseAdmin.from("clinical_notes").insert({ encounter_id, note_type: "progress_note", subjective, objective, assessment, plan, diagnosis_codes, is_signed: is_signed || false, signed_at: signed_at || null }).select().single());
+    ({ data, error } = await supabaseAdmin.from("clinical_notes").insert({ encounter_id, note_type: "progress_note", subjective, objective, assessment, plan, diagnosis_codes, is_signed: is_signed || false, signed_at: signed_at || null, is_late_note: is_late_note || false, late_note_reason: late_note_reason || null }).select().single());
     if (is_signed) await supabaseAdmin.from("encounters").update({ status: "signed" }).eq("id", encounter_id);
   }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
     resource_type: "clinical_note",
     resource_id: data?.id ?? note_id ?? null,
     description: note_id
-      ? `${is_signed ? "Signed" : "Updated"} clinical note ${note_id}`
-      : `Created clinical note for encounter ${encounter_id}`,
+      ? `${is_signed ? "Signed" : "Updated"} clinical note ${note_id}${is_late_note ? " (late note)" : ""}`
+      : `Created clinical note for encounter ${encounter_id}${is_late_note ? " (late note)" : ""}`,
     ip_address: getRequestIp(req),
     user_agent: getRequestUserAgent(req),
   });

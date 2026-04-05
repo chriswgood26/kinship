@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-interface Note { id?: string; subjective?: string; objective?: string; assessment?: string; plan?: string; diagnosis_codes?: string[]; }
+interface Note { id?: string; subjective?: string; objective?: string; assessment?: string; plan?: string; diagnosis_codes?: string[]; is_late_note?: boolean; late_note_reason?: string; }
 
 const SOAP_SECTIONS = [
   { key: "subjective", label: "S — Subjective", placeholder: "Client's reported symptoms, concerns, and history in their own words. What brings them in today?" },
@@ -17,10 +17,28 @@ const LS_KEY = (encounterId: string) => `soap-draft-${encounterId}`;
 
 type AutoSaveStatus = "idle" | "unsaved" | "saving" | "saved" | "error";
 
-export default function SOAPEditor({ encounterId, existingNote, clientName }: {
+function isLateNote(encounterDate: string): boolean {
+  // Compare encounter date (YYYY-MM-DD) to today's date (in local time)
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return encounterDate < todayStr;
+}
+
+const LATE_NOTE_REASONS = [
+  "Documentation backlog",
+  "Clinician illness or absence",
+  "Technical system issues",
+  "Emergency or crisis situation",
+  "Awaiting additional clinical information",
+  "Supervisory review required",
+  "Other (describe below)",
+];
+
+export default function SOAPEditor({ encounterId, existingNote, clientName, encounterDate }: {
   encounterId: string;
   existingNote: Note | null;
   clientName: string;
+  encounterDate: string;
 }) {
   const [note, setNote] = useState(() => {
     // On mount, check localStorage for a more recent draft
@@ -59,6 +77,9 @@ export default function SOAPEditor({ encounterId, existingNote, clientName }: {
   const [signing, setSigning] = useState(false);
   const [activeSection, setActiveSection] = useState("subjective");
   const [restoredFromDraft, setRestoredFromDraft] = useState(false);
+  const lateNote = isLateNote(encounterDate);
+  const [lateNoteReason, setLateNoteReason] = useState(existingNote?.late_note_reason || "");
+  const [lateNoteReasonError, setLateNoteReasonError] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
   const router = useRouter();
@@ -101,6 +122,8 @@ export default function SOAPEditor({ encounterId, existingNote, clientName }: {
           diagnosis_codes: noteData.diagnosis_codes.split(",").map((s: string) => s.trim()).filter(Boolean),
           is_signed: false,
           signed_at: null,
+          is_late_note: lateNote,
+          late_note_reason: lateNote ? lateNoteReason.trim() : null,
         }),
       });
       if (res.ok) {
@@ -116,7 +139,7 @@ export default function SOAPEditor({ encounterId, existingNote, clientName }: {
     } catch {
       setAutoSaveStatus("error");
     }
-  }, [encounterId]);
+  }, [encounterId, lateNote, lateNoteReason]);
 
   // Auto-save with debounce whenever note content changes
   useEffect(() => {
@@ -140,6 +163,13 @@ export default function SOAPEditor({ encounterId, existingNote, clientName }: {
   }, [note]);
 
   async function saveNote(sign = false) {
+    // Validate late note reason before signing
+    if (sign && lateNote && !lateNoteReason.trim()) {
+      setLateNoteReasonError(true);
+      return;
+    }
+    setLateNoteReasonError(false);
+
     if (sign) setSigning(true);
     // Cancel pending auto-save
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -157,6 +187,8 @@ export default function SOAPEditor({ encounterId, existingNote, clientName }: {
           diagnosis_codes: note.diagnosis_codes.split(",").map((s: string) => s.trim()).filter(Boolean),
           is_signed: sign,
           signed_at: sign ? new Date().toISOString() : null,
+          is_late_note: lateNote,
+          late_note_reason: lateNote ? lateNoteReason.trim() : null,
         }),
       });
       if (res.ok) {
@@ -202,6 +234,58 @@ export default function SOAPEditor({ encounterId, existingNote, clientName }: {
             <span className="font-semibold">📋 Draft restored</span> — your unsaved changes from a previous session have been recovered.
           </div>
           <button onClick={dismissDraftNotice} className="text-amber-500 hover:text-amber-700 text-sm ml-4">✕</button>
+        </div>
+      )}
+
+      {/* Late note warning */}
+      {lateNote && (
+        <div className={`border rounded-xl px-4 py-4 ${lateNoteReasonError ? "border-red-300 bg-red-50" : "border-orange-200 bg-orange-50"}`}>
+          <div className="flex items-start gap-3">
+            <span className="text-orange-500 text-lg mt-0.5">⏰</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-orange-800 mb-1">
+                Late Note — Encounter date was {new Date(encounterDate + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </p>
+              <p className="text-xs text-orange-700 mb-3">
+                This note is being documented after the encounter date. A reason is required before signing.
+              </p>
+              <label className="block text-xs font-semibold text-orange-800 uppercase tracking-wide mb-1.5">
+                Reason for Late Documentation <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={lateNoteReason.startsWith("Other:") ? "Other (describe below)" : (LATE_NOTE_REASONS.includes(lateNoteReason) ? lateNoteReason : (lateNoteReason ? "Other (describe below)" : ""))}
+                onChange={e => {
+                  if (e.target.value === "Other (describe below)") {
+                    setLateNoteReason("Other: ");
+                  } else {
+                    setLateNoteReason(e.target.value);
+                  }
+                  setLateNoteReasonError(false);
+                }}
+                className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 mb-2 ${lateNoteReasonError ? "border-red-400 bg-red-50" : "border-orange-200 bg-white"}`}
+              >
+                <option value="">— Select a reason —</option>
+                {LATE_NOTE_REASONS.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              {(lateNoteReason.startsWith("Other:") || lateNoteReason === "Other (describe below)") && (
+                <input
+                  type="text"
+                  value={lateNoteReason.startsWith("Other:") ? lateNoteReason.slice(6).trimStart() : ""}
+                  onChange={e => {
+                    setLateNoteReason(`Other: ${e.target.value}`);
+                    setLateNoteReasonError(false);
+                  }}
+                  placeholder="Describe the reason for late documentation..."
+                  className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 ${lateNoteReasonError ? "border-red-400 bg-red-50" : "border-orange-200 bg-white"}`}
+                />
+              )}
+              {lateNoteReasonError && (
+                <p className="text-xs text-red-600 mt-1 font-medium">⚠ A reason is required before signing a late note.</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

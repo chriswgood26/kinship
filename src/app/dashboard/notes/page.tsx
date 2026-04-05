@@ -98,6 +98,9 @@ export default async function ClinicalNotesPage({
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${note.is_signed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                           {note.is_signed ? "✓ Signed" : "Unsigned"}
                         </span>
+                        {note.is_late_note && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">⏰ Late</span>
+                        )}
                         {note.diagnosis_codes?.length > 0 && (
                           <span className="text-xs text-slate-400 font-mono">{note.diagnosis_codes.slice(0, 2).join(", ")}</span>
                         )}

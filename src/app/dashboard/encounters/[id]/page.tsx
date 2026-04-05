@@ -140,7 +140,12 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
         <>
           <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden">
             <div className="px-5 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
-              <h2 className="font-semibold text-emerald-900">✓ Signed Progress Note</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-emerald-900">✓ Signed Progress Note</h2>
+                {existingNote.is_late_note && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">⏰ Late Note</span>
+                )}
+              </div>
               <div className="text-xs text-emerald-600">
                 {existingNote.signed_at ? new Date(existingNote.signed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : ""}
               </div>
@@ -164,6 +169,12 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
                   ))}
                 </div>
               )}
+              {existingNote.is_late_note && existingNote.late_note_reason && (
+                <div className="border border-orange-200 bg-orange-50 rounded-xl p-4">
+                  <div className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-1">⏰ Late Note Reason</div>
+                  <p className="text-sm text-orange-900">{existingNote.late_note_reason}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -178,6 +189,7 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
           encounterId={id}
           existingNote={existingNote}
           clientName={client ? `${client.last_name}, ${client.first_name}` : ""}
+          encounterDate={encounter.encounter_date}
         />
       )}
     </div>

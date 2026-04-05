@@ -175,9 +175,15 @@ create table if not exists clinical_notes (
   is_signed boolean default false,
   signed_at timestamptz,
   signed_by_clerk_id text,
+  is_late_note boolean default false,
+  late_note_reason text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Migration: add late note columns if not exists
+-- alter table clinical_notes add column if not exists is_late_note boolean default false;
+-- alter table clinical_notes add column if not exists late_note_reason text;
 
 -- Note amendments / addenda (corrections to locked/signed notes)
 -- The original note is never modified; amendments append to the audit trail.
