@@ -8,6 +8,8 @@ import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import UpdateBanner from "@/components/UpdateBanner";
 import SessionTimeout from "@/components/SessionTimeout";
+import OfflineBanner from "@/components/OfflineBanner";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -42,6 +44,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       <div className="fixed top-0 left-0 right-0 h-[3px] bg-teal-500 z-[9999]" />
       <UpdateBanner />
+      <OfflineBanner />
+      <ServiceWorkerRegistration />
       <SessionTimeout />
       <div className="flex h-screen bg-slate-50 overflow-hidden pt-[3px]">
         <Sidebar terminology={terminology} userRoles={profile?.roles || [profile?.role || "clinician"]} plan={org?.plan || "starter"} />
