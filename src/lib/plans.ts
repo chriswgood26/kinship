@@ -16,6 +16,7 @@ export interface PlanFeatures {
   assessments: boolean;
   supervisorReview: boolean;
   treatmentPlans: boolean;
+  telehealth: boolean; // Embedded Zoom/Webex/Jitsi video sessions
   // Practice+
   emar: boolean;
   ddModules: boolean; // ISP, incidents, DD progress notes
@@ -33,35 +34,35 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   starter: {
     maxUsers: 5, storageGB: 5,
     clients: true, scheduling: true, encounters: true, billing: true, portal: true,
-    ccbhc: false, assessments: false, supervisorReview: false, treatmentPlans: false,
+    ccbhc: false, assessments: false, supervisorReview: false, treatmentPlans: false, telehealth: false,
     emar: false, ddModules: false, bedManagement: false, priorAuth: false, advancedReports: false,
     multiLocation: false, sla: false, smsReminders: false,
   },
   growth: {
     maxUsers: 15, storageGB: 20,
     clients: true, scheduling: true, encounters: true, billing: true, portal: true,
-    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true,
+    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true, telehealth: true,
     emar: false, ddModules: false, bedManagement: false, priorAuth: false, advancedReports: false,
     multiLocation: false, sla: false, smsReminders: false,
   },
   practice: {
     maxUsers: 30, storageGB: 30,
     clients: true, scheduling: true, encounters: true, billing: true, portal: true,
-    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true,
+    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true, telehealth: true,
     emar: true, ddModules: true, bedManagement: true, priorAuth: true, advancedReports: true,
     multiLocation: false, sla: false, smsReminders: false,
   },
   agency: {
     maxUsers: 50, storageGB: 50,
     clients: true, scheduling: true, encounters: true, billing: true, portal: true,
-    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true,
+    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true, telehealth: true,
     emar: true, ddModules: true, bedManagement: true, priorAuth: true, advancedReports: true,
     multiLocation: true, sla: true, smsReminders: false,
   },
   custom: {
     maxUsers: 9999, storageGB: 999,
     clients: true, scheduling: true, encounters: true, billing: true, portal: true,
-    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true,
+    ccbhc: true, assessments: true, supervisorReview: true, treatmentPlans: true, telehealth: true,
     emar: true, ddModules: true, bedManagement: true, priorAuth: true, advancedReports: true,
     multiLocation: true, sla: true, smsReminders: true,
   },

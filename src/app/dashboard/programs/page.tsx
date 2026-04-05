@@ -24,7 +24,7 @@ export default function ProgramsPage() {
   }
 
   async function loadEnrollments(programId: string) {
-    const res = await fetch(`/api/patient-programs?program_id=${programId}`, { credentials: "include" });
+    const res = await fetch(`/api/client-programs?program_id=${programId}`, { credentials: "include" });
     const d = await res.json();
     setEnrollments(d.enrollments || []);
   }
@@ -157,7 +157,7 @@ export default function ProgramsPage() {
               <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="font-semibold text-slate-900 text-sm">Active Census ({activeEnrollments.length})</h3>
-                  <Link href={`/dashboard/patients`} className="text-xs text-teal-600 font-medium hover:text-teal-700">+ Enroll patient from patient record →</Link>
+                  <Link href={`/dashboard/clients`} className="text-xs text-teal-600 font-medium hover:text-teal-700">+ Enroll patient from patient record →</Link>
                 </div>
                 {activeEnrollments.length === 0 ? (
                   <div className="p-8 text-center text-slate-400 text-sm">No active enrollments in this program</div>

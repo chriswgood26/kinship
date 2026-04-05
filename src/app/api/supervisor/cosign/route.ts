@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         // Get note with author info
         const { data: note } = await supabaseAdmin
           .from("clinical_notes")
-          .select("author_id, encounter:encounter_id(encounter_type, patient:patient_id(first_name, last_name))")
+          .select("author_id, encounter:encounter_id(encounter_type, client:client_id(first_name, last_name))")
           .eq("id", id)
           .single();
 

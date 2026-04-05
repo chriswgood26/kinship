@@ -2,7 +2,7 @@
 // Validates charges before submission to reduce denials
 
 export interface ChargeInput {
-  patient_id: string;
+  client_id: string;
   service_date: string;
   cpt_code: string;
   icd10_codes: string[];

@@ -75,34 +75,43 @@ function NewReferralForm() {
       client_id: isIncoming ? null : form.client_id,
     };
 
-    const res = await fetch("/api/referrals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Failed"); setSaving(false); return; }
-
-    // Send internal notification to the referred provider
-    if (isInternal && selectedStaff && data.referral) {
-      await fetch("/api/notifications/create", {
+    try {
+      const res = await fetch("/api/referrals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          recipient_clerk_id: selectedStaff.clerk_user_id,
-          type: "internal_referral",
-          title: "New Internal Referral",
-          message: `You have a new internal referral${form.patient_name ? ` for ${form.patient_name}` : ""}. Priority: ${form.priority}.${form.reason ? ` Reason: ${form.reason}` : ""}`,
-          entity_type: "referral",
-          entity_id: data.referral.id,
-          link: `/dashboard/referrals/${data.referral.id}`,
-        }),
+        body: JSON.stringify(payload),
       });
-    }
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Failed"); setSaving(false); return; }
 
-    router.push("/dashboard/referrals");
+      // Send internal notification to the referred provider
+      if (isInternal && selectedStaff && data.referral) {
+        try {
+          await fetch("/api/notifications/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              recipient_clerk_id: selectedStaff.clerk_user_id,
+              type: "internal_referral",
+              title: "New Internal Referral",
+              message: `You have a new internal referral${form.patient_name ? ` for ${form.patient_name}` : ""}. Priority: ${form.priority}.${form.reason ? ` Reason: ${form.reason}` : ""}`,
+              entity_type: "referral",
+              entity_id: data.referral.id,
+              link: `/dashboard/referrals/${data.referral.id}`,
+            }),
+          });
+        } catch (notifErr) {
+          console.error("Notification failed:", notifErr);
+        }
+      }
+
+      router.push("/dashboard/referrals");
+    } catch (err) {
+      setError("Failed to save referral. Please try again.");
+      setSaving(false);
+    }
   }
 
   const inputClass = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500";

@@ -22,7 +22,7 @@ export default function ClientPrograms({ patientId }: { patientId: string }) {
 
   async function load() {
     const [enrollRes, progRes] = await Promise.all([
-      fetch(`/api/patient-programs?client_id=${patientId}`, { credentials: "include" }),
+      fetch(`/api/client-programs?client_id=${patientId}`, { credentials: "include" }),
       fetch("/api/programs", { credentials: "include" }),
     ]);
     const [ed, pd] = await Promise.all([enrollRes.json(), progRes.json()]);
@@ -36,7 +36,7 @@ export default function ClientPrograms({ patientId }: { patientId: string }) {
     e.preventDefault();
     if (!form.program_id) return;
     setSaving(true);
-    await fetch("/api/patient-programs", {
+    await fetch("/api/client-programs", {
       method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
       body: JSON.stringify({ ...form, client_id: patientId }),
     });
@@ -47,7 +47,7 @@ export default function ClientPrograms({ patientId }: { patientId: string }) {
   }
 
   async function discharge(id: string) {
-    await fetch("/api/patient-programs", {
+    await fetch("/api/client-programs", {
       method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
       body: JSON.stringify({ id, status: "discharged", discharge_date: new Date().toISOString().split("T")[0] }),
     });

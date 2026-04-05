@@ -8,7 +8,12 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const orgId = await getOrgId(userId);
+  let orgId: string;
+  try {
+    orgId = await getOrgId(userId);
+  } catch {
+    return NextResponse.json({ error: "Organization not found for user" }, { status: 403 });
+  }
   const body = await req.json();
 
   if (!body.client_id && body.referral_type !== "incoming") {
