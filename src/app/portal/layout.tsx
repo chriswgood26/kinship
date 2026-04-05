@@ -50,6 +50,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const navItems = [
     { href: "/portal/dashboard", label: "Home", icon: "🏠" },
     ...(access.messages !== false ? [{ href: "/portal/messages", label: "Messages", icon: "💬" }] : []),
+    { href: "/portal/profile", label: "My Profile", icon: "👤" },
   ];
 
   return (
