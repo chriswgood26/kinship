@@ -96,6 +96,13 @@ export default async function AssessmentsPage() {
           <div className="text-xs text-slate-500 mt-0.5">Columbia Suicide Severity Rating Scale</div>
           <div className="text-xs text-red-600 font-semibold mt-2">Start Assessment →</div>
         </Link>
+        <Link href="/dashboard/assessments/asi/new"
+          className="bg-white rounded-2xl border-2 border-orange-200 hover:border-orange-400 p-5 text-left transition-all hover:shadow-sm">
+          <div className="text-3xl mb-3">🔬</div>
+          <div className="font-bold text-slate-900">ASI</div>
+          <div className="text-sm text-slate-500 mt-1">Addiction Severity Index (5th Ed.) — comprehensive SUD assessment covering 7 domains: medical, employment, alcohol, drugs, legal, family, and psychiatric</div>
+          <div className="mt-3 text-xs text-orange-600 font-semibold">SUD Assessment · McLellan et al.</div>
+        </Link>
       </div>
 
       {/* Past assessments */}
@@ -114,6 +121,7 @@ export default async function AssessmentsPage() {
                   a.assessment_type === "BPS" ? `/dashboard/assessments/bps/${a.id}` :
                   a.assessment_type === "CUMHA" ? `/dashboard/assessments/cumha/${a.id}` :
                   a.assessment_type === "Psych Eval" ? `/dashboard/assessments/psych-eval/${a.id}` :
+                  a.assessment_type === "ASI" ? `/dashboard/assessments/asi/${a.id}` :
                   `/dashboard/assessments/imcans/${a.id}`
                 }
                   className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors no-underline">
