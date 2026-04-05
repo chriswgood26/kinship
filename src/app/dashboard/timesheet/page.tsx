@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 
 interface TimeEntry {
   id: string;
@@ -10,6 +9,7 @@ interface TimeEntry {
   end_time: string | null;
   duration_minutes: number;
   activity_type: string;
+  activity_category: string | null;
   activity_description: string | null;
   is_billable: boolean;
   funding_source: string | null;
@@ -27,24 +27,167 @@ interface PayPeriodConfig {
   anchorDate?: string;   // for weekly/biweekly: a known period start date
 }
 
-const ACTIVITY_TYPES = [
-  { value: "individual_therapy", label: "Individual Therapy", billable: true },
-  { value: "group_therapy", label: "Group Therapy", billable: true },
-  { value: "psychiatric_eval", label: "Psychiatric Evaluation", billable: true },
-  { value: "medication_management", label: "Medication Management", billable: true },
-  { value: "case_management", label: "Case Management", billable: true },
-  { value: "crisis_intervention", label: "Crisis Intervention", billable: true },
-  { value: "telehealth", label: "Telehealth Session", billable: true },
-  { value: "assessment", label: "Assessment / Intake", billable: true },
-  { value: "documentation", label: "Documentation / Charting", billable: false },
-  { value: "care_coordination", label: "Care Coordination (phone/email)", billable: false },
-  { value: "consultation", label: "Consultation", billable: false },
-  { value: "supervision", label: "Supervision", billable: false },
-  { value: "training", label: "Training / In-service", billable: false },
-  { value: "admin", label: "Administrative", billable: false },
-  { value: "travel", label: "Travel / Home Visit", billable: false },
-  { value: "other", label: "Other", billable: false },
+// ─── Activity categories (the 6 named non-clinical categories + direct care) ──
+const ACTIVITY_CATEGORIES = [
+  {
+    value: "clinical",
+    label: "Clinical / Direct Care",
+    shortLabel: "Clinical",
+    color: "bg-emerald-500",
+    textColor: "text-emerald-700",
+    bgColor: "bg-emerald-100",
+    borderColor: "border-emerald-200",
+  },
+  {
+    value: "case_management",
+    label: "Case Management",
+    shortLabel: "Case Mgmt",
+    color: "bg-blue-500",
+    textColor: "text-blue-700",
+    bgColor: "bg-blue-100",
+    borderColor: "border-blue-200",
+  },
+  {
+    value: "care_coordination",
+    label: "Care Coordination",
+    shortLabel: "Care Coord",
+    color: "bg-indigo-500",
+    textColor: "text-indigo-700",
+    bgColor: "bg-indigo-100",
+    borderColor: "border-indigo-200",
+  },
+  {
+    value: "documentation",
+    label: "Documentation",
+    shortLabel: "Docs",
+    color: "bg-amber-500",
+    textColor: "text-amber-700",
+    bgColor: "bg-amber-100",
+    borderColor: "border-amber-200",
+  },
+  {
+    value: "supervision",
+    label: "Supervision",
+    shortLabel: "Supervision",
+    color: "bg-violet-500",
+    textColor: "text-violet-700",
+    bgColor: "bg-violet-100",
+    borderColor: "border-violet-200",
+  },
+  {
+    value: "training",
+    label: "Training",
+    shortLabel: "Training",
+    color: "bg-pink-500",
+    textColor: "text-pink-700",
+    bgColor: "bg-pink-100",
+    borderColor: "border-pink-200",
+  },
+  {
+    value: "admin",
+    label: "Administrative",
+    shortLabel: "Admin",
+    color: "bg-slate-400",
+    textColor: "text-slate-600",
+    bgColor: "bg-slate-100",
+    borderColor: "border-slate-200",
+  },
+  {
+    value: "other",
+    label: "Other",
+    shortLabel: "Other",
+    color: "bg-slate-300",
+    textColor: "text-slate-500",
+    bgColor: "bg-slate-50",
+    borderColor: "border-slate-200",
+  },
 ];
+
+function getCategoryMeta(categoryValue: string | null) {
+  return ACTIVITY_CATEGORIES.find(c => c.value === categoryValue) || ACTIVITY_CATEGORIES[ACTIVITY_CATEGORIES.length - 1];
+}
+
+function deriveCategoryFromType(activityType: string): string {
+  if (["individual_therapy","group_therapy","psychiatric_eval","medication_management","crisis_intervention","telehealth","assessment"].includes(activityType)) return "clinical";
+  if (activityType === "case_management") return "case_management";
+  if (["care_coordination","consultation"].includes(activityType)) return "care_coordination";
+  if (activityType === "documentation") return "documentation";
+  if (activityType === "supervision") return "supervision";
+  if (activityType === "training") return "training";
+  if (["admin","travel"].includes(activityType)) return "admin";
+  return "other";
+}
+
+// Activity types grouped by category
+const ACTIVITY_CATEGORIES_GROUPED = [
+  {
+    category: "clinical",
+    label: "Clinical / Direct Care",
+    activities: [
+      { value: "individual_therapy", label: "Individual Therapy", billable: true },
+      { value: "group_therapy", label: "Group Therapy", billable: true },
+      { value: "psychiatric_eval", label: "Psychiatric Evaluation", billable: true },
+      { value: "medication_management", label: "Medication Management", billable: true },
+      { value: "crisis_intervention", label: "Crisis Intervention", billable: true },
+      { value: "telehealth", label: "Telehealth Session", billable: true },
+      { value: "assessment", label: "Assessment / Intake", billable: true },
+    ],
+  },
+  {
+    category: "case_management",
+    label: "Case Management",
+    activities: [
+      { value: "case_management", label: "Case Management", billable: true },
+    ],
+  },
+  {
+    category: "care_coordination",
+    label: "Care Coordination",
+    activities: [
+      { value: "care_coordination", label: "Care Coordination (phone/email)", billable: false },
+      { value: "consultation", label: "Consultation / Collaboration", billable: false },
+    ],
+  },
+  {
+    category: "documentation",
+    label: "Documentation",
+    activities: [
+      { value: "documentation", label: "Documentation / Charting", billable: false },
+    ],
+  },
+  {
+    category: "supervision",
+    label: "Supervision",
+    activities: [
+      { value: "supervision", label: "Supervision (received or provided)", billable: false },
+    ],
+  },
+  {
+    category: "training",
+    label: "Training",
+    activities: [
+      { value: "training", label: "Training / In-service", billable: false },
+    ],
+  },
+  {
+    category: "admin",
+    label: "Administrative",
+    activities: [
+      { value: "admin", label: "Administrative", billable: false },
+      { value: "travel", label: "Travel / Home Visit", billable: false },
+    ],
+  },
+  {
+    category: "other",
+    label: "Other",
+    activities: [
+      { value: "other", label: "Other", billable: false },
+    ],
+  },
+];
+
+// Flat list for backwards compatibility (lookups)
+const ACTIVITY_TYPES = ACTIVITY_CATEGORIES_GROUPED.flatMap(g => g.activities);
 
 function getWeekDates(weekOffset = 0) {
   const now = new Date();
@@ -135,24 +278,47 @@ function buildCSV(
   rows.push([q(`Generated: ${new Date().toLocaleString()}`)]);
   rows.push([]);
 
-  // — Summary by Activity —
+  const totalMins = exportEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+  const totalBill = exportEntries.filter(e => e.is_billable).reduce((s, e) => s + (e.duration_minutes || 0), 0);
+
+  // — Summary by Category —
+  rows.push([q("HOURS BY ACTIVITY CATEGORY")]);
+  rows.push([q("Category"), q("Total Hours"), q("Billable Hours"), q("Non-Billable Hours"), q("% of Total"), q("Entries")]);
+  const byCategory = new Map<string, { total: number; billable: number; count: number }>();
+  for (const e of exportEntries) {
+    const key = e.activity_category || deriveCategoryFromType(e.activity_type);
+    const cur = byCategory.get(key) || { total: 0, billable: 0, count: 0 };
+    cur.total += e.duration_minutes || 0;
+    if (e.is_billable) cur.billable += e.duration_minutes || 0;
+    cur.count++;
+    byCategory.set(key, cur);
+  }
+  for (const cat of ACTIVITY_CATEGORIES) {
+    const v = byCategory.get(cat.value);
+    if (!v) continue;
+    const pct = totalMins > 0 ? ((v.total / totalMins) * 100).toFixed(1) + "%" : "0%";
+    rows.push([q(cat.label), q(fmt(v.total)), q(fmt(v.billable)), q(fmt(v.total - v.billable)), q(pct), q(v.count)]);
+  }
+  rows.push([q("TOTAL"), q(fmt(totalMins)), q(fmt(totalBill)), q(fmt(totalMins - totalBill)), q("100%"), q(exportEntries.length)]);
+  rows.push([]);
+
+  // — Summary by Activity Type —
   rows.push([q("HOURS BY ACTIVITY TYPE")]);
-  rows.push([q("Activity"), q("Total Hours"), q("Billable Hours"), q("Non-Billable Hours"), q("Entries")]);
-  const byActivity = new Map<string, { total: number; billable: number; count: number }>();
+  rows.push([q("Category"), q("Activity"), q("Total Hours"), q("Billable Hours"), q("Non-Billable Hours"), q("Entries")]);
+  const byActivity = new Map<string, { total: number; billable: number; count: number; category: string }>();
   for (const e of exportEntries) {
     const key = e.activity_type;
-    const cur = byActivity.get(key) || { total: 0, billable: 0, count: 0 };
+    const cur = byActivity.get(key) || { total: 0, billable: 0, count: 0, category: e.activity_category || deriveCategoryFromType(e.activity_type) };
     cur.total += e.duration_minutes || 0;
     if (e.is_billable) cur.billable += e.duration_minutes || 0;
     cur.count++;
     byActivity.set(key, cur);
   }
   for (const [act, v] of Array.from(byActivity.entries()).sort((a, b) => b[1].total - a[1].total)) {
-    rows.push([q(actLabel(act)), q(fmt(v.total)), q(fmt(v.billable)), q(fmt(v.total - v.billable)), q(v.count)]);
+    const catMeta = getCategoryMeta(v.category);
+    rows.push([q(catMeta.label), q(actLabel(act)), q(fmt(v.total)), q(fmt(v.billable)), q(fmt(v.total - v.billable)), q(v.count)]);
   }
-  const totalMins = exportEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
-  const totalBill = exportEntries.filter(e => e.is_billable).reduce((s, e) => s + (e.duration_minutes || 0), 0);
-  rows.push([q("TOTAL"), q(fmt(totalMins)), q(fmt(totalBill)), q(fmt(totalMins - totalBill)), q(exportEntries.length)]);
+  rows.push([q("TOTAL"), q(""), q(fmt(totalMins)), q(fmt(totalBill)), q(fmt(totalMins - totalBill)), q(exportEntries.length)]);
   rows.push([]);
 
   // — Summary by Patient —
@@ -213,18 +379,20 @@ function buildCSV(
   rows.push([q("DETAIL")]);
   rows.push([
     q("Date"), q("Clinician"), q("Patient"), q("MRN"), q("Program"),
-    q("Activity"), q("Description"), q("Start"), q("End"),
+    q("Category"), q("Activity"), q("Description"), q("Start"), q("End"),
     q("Hours"), q("Billable"), q("Funding Source"), q("Notes"),
   ]);
   for (const e of [...exportEntries].sort((a, b) => a.entry_date.localeCompare(b.entry_date))) {
     const p = Array.isArray(e.patient) ? e.patient[0] : e.patient;
     const pg = Array.isArray(e.program) ? e.program[0] : e.program;
+    const catMeta = getCategoryMeta(e.activity_category || deriveCategoryFromType(e.activity_type));
     rows.push([
       q(e.entry_date),
       q(e.clinician_name || "—"),
       q(p ? `${p.last_name}, ${p.first_name}` : "—"),
       q(p?.mrn || "—"),
       q(pg?.name || "—"),
+      q(catMeta.label),
       q(actLabel(e.activity_type)),
       q(e.activity_description || ""),
       q(e.start_time ? e.start_time.slice(0, 5) : "—"),
@@ -257,6 +425,7 @@ export default function TimesheetPage() {
   const [exportCustomFrom, setExportCustomFrom] = useState("");
   const [exportCustomTo, setExportCustomTo] = useState("");
   const [exportClinician, setExportClinician] = useState("me");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const weekDays = getWeekDates(weekOffset);
   const weekStart = weekDays[0].toISOString().split("T")[0];
@@ -416,6 +585,27 @@ export default function TimesheetPage() {
     entries: entries.filter(e => e.entry_date === d.toISOString().split("T")[0]),
   }));
 
+  // Category breakdown for the current week view
+  const categoryBreakdown = (() => {
+    const map = new Map<string, number>();
+    for (const e of entries) {
+      const key = e.activity_category || deriveCategoryFromType(e.activity_type);
+      map.set(key, (map.get(key) || 0) + (e.duration_minutes || 0));
+    }
+    return ACTIVITY_CATEGORIES
+      .map(cat => ({
+        ...cat,
+        mins: map.get(cat.value) || 0,
+        pct: totalMinutes > 0 ? Math.round(((map.get(cat.value) || 0) / totalMinutes) * 100) : 0,
+      }))
+      .filter(c => c.mins > 0);
+  })();
+
+  // Filtered entries for list view
+  const filteredEntries = categoryFilter === "all"
+    ? entries
+    : entries.filter(e => (e.activity_category || deriveCategoryFromType(e.activity_type)) === categoryFilter);
+
   // Funding source breakdown for the current week view
   const fundingBreakdown = (() => {
     const map = new Map<string, number>();
@@ -519,6 +709,67 @@ export default function TimesheetPage() {
         ))}
       </div>
 
+      {/* Activity Category Breakdown */}
+      {entries.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-slate-900 text-sm">Activity Category Breakdown</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Hours by activity category this week</p>
+            </div>
+            <span className="text-xs text-slate-400">{formatHours(totalMinutes)} total</span>
+          </div>
+          {categoryBreakdown.length > 0 ? (
+            <div className="space-y-3">
+              {/* Stacked bar */}
+              <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
+                {categoryBreakdown.map(cat => (
+                  cat.pct > 0 && (
+                    <div
+                      key={cat.value}
+                      title={`${cat.label}: ${cat.pct}%`}
+                      style={{ width: `${cat.pct}%` }}
+                      className={`${cat.color} transition-all`}
+                    />
+                  )
+                ))}
+              </div>
+              {/* Category cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                {categoryBreakdown.map(cat => (
+                  <button
+                    key={cat.value}
+                    onClick={() => setCategoryFilter(f => f === cat.value ? "all" : cat.value)}
+                    className={`text-left px-3 py-2.5 rounded-xl border transition-all ${
+                      categoryFilter === cat.value
+                        ? `${cat.bgColor} ${cat.borderColor} ring-1 ring-current`
+                        : "border-slate-100 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cat.color}`} />
+                      <span className={`text-xs font-semibold truncate ${categoryFilter === cat.value ? cat.textColor : "text-slate-600"}`}>{cat.shortLabel}</span>
+                    </div>
+                    <div className="text-sm font-bold text-slate-900">{formatHours(cat.mins)}</div>
+                    <div className="text-xs text-slate-400">{cat.pct}%</div>
+                  </button>
+                ))}
+                {categoryFilter !== "all" && (
+                  <button
+                    onClick={() => setCategoryFilter("all")}
+                    className="text-left px-3 py-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 text-xs text-teal-600 font-medium"
+                  >
+                    ← Show all
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic">No time entries yet this week.</p>
+          )}
+        </div>
+      )}
+
       {/* Funding source breakdown */}
       {entries.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
@@ -581,8 +832,23 @@ export default function TimesheetPage() {
             <div>
               <label className={labelClass}>Activity Type *</label>
               <select value={form.activity_type} onChange={e => setForm(f => ({ ...f, activity_type: e.target.value }))} className={inputClass} required>
-                {ACTIVITY_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}{a.billable ? " (billable)" : ""}</option>)}
+                {ACTIVITY_CATEGORIES_GROUPED.map(group => (
+                  <optgroup key={group.category} label={group.label}>
+                    {group.activities.map(a => (
+                      <option key={a.value} value={a.value}>{a.label}{a.billable ? " ★" : ""}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
+              {(() => {
+                const cat = getCategoryMeta(deriveCategoryFromType(form.activity_type));
+                return (
+                  <div className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${cat.bgColor} ${cat.textColor}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${cat.color}`} />
+                    {cat.label}
+                  </div>
+                );
+              })()}
             </div>
             <div>
               <label className={labelClass}>Patient (optional)</label>
@@ -664,43 +930,89 @@ export default function TimesheetPage() {
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
-            {entries.map(entry => {
-              const patient = Array.isArray(entry.patient) ? entry.patient[0] : entry.patient;
-              const activity = ACTIVITY_TYPES.find(a => a.value === entry.activity_type);
-              return (
-                <div key={entry.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50">
-                  <div className="w-20 flex-shrink-0 text-xs text-slate-500 font-medium">
-                    {new Date(entry.entry_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm text-slate-900">{activity?.label || entry.activity_type}</div>
-                    {patient && <div className="text-xs text-slate-500">{patient.last_name}, {patient.first_name}</div>}
-                    {entry.activity_description && <div className="text-xs text-slate-400 truncate">{entry.activity_description}</div>}
-                    {viewMode === "all" && entry.clinician_name && <div className="text-xs text-teal-600">{entry.clinician_name}</div>}
-                  </div>
-                  <div className="text-xs text-slate-500 flex-shrink-0">
-                    {entry.start_time && entry.end_time ? `${entry.start_time.slice(0,5)} – ${entry.end_time.slice(0,5)}` : ""}
-                  </div>
-                  <div className="font-bold text-sm flex-shrink-0 w-16 text-right text-slate-900">
-                    {formatHours(entry.duration_minutes || 0)}
-                  </div>
-                  <div className="flex-shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${entry.is_billable ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                      {entry.is_billable ? "Billable" : "Non-billable"}
-                    </span>
-                  </div>
-                  {entry.funding_source && (
-                    <div className="flex-shrink-0 hidden sm:block">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200">
-                        {entry.funding_source}
+            {/* Category filter tabs */}
+            {entries.length > 0 && (
+              <div className="px-5 py-3 flex items-center gap-2 flex-wrap bg-slate-50 border-b border-slate-100">
+                <button
+                  onClick={() => setCategoryFilter("all")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${categoryFilter === "all" ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-200"}`}
+                >
+                  All
+                </button>
+                {categoryBreakdown.map(cat => (
+                  <button
+                    key={cat.value}
+                    onClick={() => setCategoryFilter(f => f === cat.value ? "all" : cat.value)}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                      categoryFilter === cat.value ? `${cat.bgColor} ${cat.textColor}` : "text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${cat.color}`} />
+                    {cat.shortLabel}
+                    <span className="opacity-70">({cat.mins >= 60 ? Math.round(cat.mins / 60 * 10) / 10 + "h" : cat.mins + "m"})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {filteredEntries.length === 0 ? (
+              <div className="p-6 text-center text-slate-400 text-sm">
+                No entries for this category.{" "}
+                <button onClick={() => setCategoryFilter("all")} className="text-teal-600 font-medium hover:text-teal-700">Show all</button>
+              </div>
+            ) : (
+              filteredEntries.map(entry => {
+                const patient = Array.isArray(entry.patient) ? entry.patient[0] : entry.patient;
+                const activity = ACTIVITY_TYPES.find(a => a.value === entry.activity_type);
+                const catMeta = getCategoryMeta(entry.activity_category || deriveCategoryFromType(entry.activity_type));
+                return (
+                  <div key={entry.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50">
+                    {/* Category color stripe */}
+                    <div className={`w-0.5 h-10 rounded-full flex-shrink-0 ${catMeta.color}`} />
+                    <div className="w-20 flex-shrink-0 text-xs text-slate-500 font-medium">
+                      {new Date(entry.entry_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-slate-900">{activity?.label || entry.activity_type}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-md font-semibold ${catMeta.bgColor} ${catMeta.textColor}`}>
+                          {catMeta.shortLabel}
+                        </span>
+                      </div>
+                      {patient && <div className="text-xs text-slate-500">{patient.last_name}, {patient.first_name}</div>}
+                      {entry.activity_description && <div className="text-xs text-slate-400 truncate">{entry.activity_description}</div>}
+                      {viewMode === "all" && entry.clinician_name && <div className="text-xs text-teal-600">{entry.clinician_name}</div>}
+                    </div>
+                    <div className="text-xs text-slate-500 flex-shrink-0">
+                      {entry.start_time && entry.end_time ? `${entry.start_time.slice(0,5)} – ${entry.end_time.slice(0,5)}` : ""}
+                    </div>
+                    <div className="font-bold text-sm flex-shrink-0 w-16 text-right text-slate-900">
+                      {formatHours(entry.duration_minutes || 0)}
+                    </div>
+                    <div className="flex-shrink-0">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${entry.is_billable ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                        {entry.is_billable ? "Billable" : "Non-billable"}
                       </span>
                     </div>
-                  )}
-                  <button onClick={() => deleteEntry(entry.id)} className="text-slate-300 hover:text-red-400 flex-shrink-0 text-sm">✕</button>
-                </div>
-              );
-            })}
+                    {entry.funding_source && (
+                      <div className="flex-shrink-0 hidden sm:block">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200">
+                          {entry.funding_source}
+                        </span>
+                      </div>
+                    )}
+                    <button onClick={() => deleteEntry(entry.id)} className="text-slate-300 hover:text-red-400 flex-shrink-0 text-sm">✕</button>
+                  </div>
+                );
+              })
+            )}
             <div className="px-5 py-3 bg-slate-50 flex items-center justify-end gap-6 text-sm">
+              {categoryFilter !== "all" && (
+                <span className="text-slate-400 text-xs">
+                  Showing {filteredEntries.length} of {entries.length} entries
+                  {" · "}
+                  <button onClick={() => setCategoryFilter("all")} className="text-teal-600 font-medium hover:text-teal-700">Show all</button>
+                </span>
+              )}
               <span className="text-slate-500">Total: <span className="font-bold text-slate-900">{formatHours(totalMinutes)}</span></span>
               <span className="text-emerald-600">Billable: <span className="font-bold">{formatHours(billableMinutes)}</span></span>
             </div>
@@ -767,7 +1079,13 @@ export default function TimesheetPage() {
               </div>
 
               <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500">
-                <strong className="text-slate-700">Report includes:</strong> Summary by activity type · Summary by patient · Summary by program · <strong className="text-teal-700">Summary by funding source</strong> (Medicaid, Block Grant, CCBHC, etc.) · Full detail rows
+                <strong className="text-slate-700">Report includes:</strong>{" "}
+                <strong className="text-blue-700">Summary by activity category</strong> (case mgmt, care coordination, documentation, supervision, training, admin) ·{" "}
+                Summary by activity type ·{" "}
+                Summary by patient ·{" "}
+                Summary by program ·{" "}
+                <strong className="text-teal-700">Summary by funding source</strong> (Medicaid, Block Grant, CCBHC, etc.) ·{" "}
+                Full detail rows
               </div>
             </div>
             <div className="flex gap-3 justify-end px-6 py-4 border-t border-slate-100">

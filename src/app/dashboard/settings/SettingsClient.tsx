@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { PLAN_PRICES, PLAN_LABELS, type Plan } from "@/lib/plans";
+import NoteTemplatesManager from "./NoteTemplatesManager";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,16 @@ const MODULES: SettingsModule[] = [
     ],
   },
   {
+    id: "note_templates",
+    icon: "📝",
+    title: "Note Templates",
+    description: "Custom clinical note formats beyond SOAP (DAP, BIRP, GIRP, and more)",
+    keywords: ["note", "template", "soap", "dap", "birp", "girp", "clinical", "documentation", "format", "custom"],
+    settings: [
+      { key: "note_templates", label: "Note Templates", description: "Create and manage custom note formats for your clinicians" },
+    ],
+  },
+  {
     id: "plan",
     icon: "💳",
     title: "Plan & Billing",
@@ -180,9 +191,9 @@ export default function SettingsClient({ org, userRoles = ["clinician"] }: { org
   // Global search
   const [search, setSearch] = useState("");
 
-  // Track which modules are expanded (all expanded by default)
+  // Track which modules are expanded (all except note_templates expanded by default)
   const [expanded, setExpanded] = useState<Record<string, boolean>>(
-    Object.fromEntries(MODULES.map(m => [m.id, true]))
+    Object.fromEntries(MODULES.map(m => [m.id, m.id !== "note_templates"]))
   );
 
   // Save states per module
@@ -700,15 +711,28 @@ export default function SettingsClient({ org, userRoles = ["clinician"] }: { org
     );
   }
 
+  function renderNoteTemplatesSettings() {
+    return (
+      <div className="px-6 py-5">
+        <p className="text-xs text-slate-400 mb-4">
+          Create custom note templates for your clinicians. SOAP is always available as a built-in option.
+          Custom templates appear in the template selector when writing notes.
+        </p>
+        <NoteTemplatesManager />
+      </div>
+    );
+  }
+
   function renderModuleContent(moduleId: string) {
     switch (moduleId) {
-      case "organization": return renderOrganizationSettings();
-      case "referrals":    return renderReferralsSettings();
-      case "scheduling":   return renderSchedulingSettings();
-      case "billing":      return renderBillingSettings();
-      case "clinical":     return renderClinicalSettings();
-      case "plan":         return renderPlanSettings();
-      default:             return null;
+      case "organization":    return renderOrganizationSettings();
+      case "referrals":       return renderReferralsSettings();
+      case "scheduling":      return renderSchedulingSettings();
+      case "billing":         return renderBillingSettings();
+      case "clinical":        return renderClinicalSettings();
+      case "note_templates":  return renderNoteTemplatesSettings();
+      case "plan":            return renderPlanSettings();
+      default:                return null;
     }
   }
 

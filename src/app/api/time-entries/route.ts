@@ -77,6 +77,20 @@ export async function POST(req: NextRequest) {
     duration_minutes = (eh * 60 + em) - (sh * 60 + sm);
   }
 
+  // Derive activity_category from activity_type if not provided
+  function deriveCategory(activityType: string): string {
+    if (["individual_therapy","group_therapy","psychiatric_eval","medication_management","crisis_intervention","telehealth","assessment"].includes(activityType)) return "clinical";
+    if (activityType === "case_management") return "case_management";
+    if (["care_coordination","consultation"].includes(activityType)) return "care_coordination";
+    if (activityType === "documentation") return "documentation";
+    if (activityType === "supervision") return "supervision";
+    if (activityType === "training") return "training";
+    if (["admin","travel"].includes(activityType)) return "admin";
+    return "other";
+  }
+
+  const activity_category = body.activity_category || deriveCategory(body.activity_type);
+
   const { data, error } = await supabaseAdmin.from("time_entries").insert({
     organization_id: orgId,
     clinician_clerk_id: userId,
@@ -90,6 +104,7 @@ export async function POST(req: NextRequest) {
     end_time: body.end_time || null,
     duration_minutes: duration_minutes || body.duration_minutes,
     activity_type: body.activity_type,
+    activity_category,
     activity_description: body.activity_description || null,
     is_billable: body.is_billable !== false,
     funding_source: body.funding_source || null,

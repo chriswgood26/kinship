@@ -2,11 +2,12 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import SOAPEditor from "./SOAPEditor";
+import NoteEditorShell from "./NoteEditorShell";
 import NoteAmendmentPanel from "./NoteAmendmentPanel";
 import TimeTracker from "./TimeTracker";
 import GroupParticipantsPanel from "./GroupParticipantsPanel";
 import GroupNoteEditor from "./GroupNoteEditor";
+import { getOrgId } from "@/lib/getOrgId";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,13 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
 
   const { id } = await params;
 
-  const [{ data: encounter }, { data: notes }, { data: charges }] = await Promise.all([
+  const orgId = await getOrgId(user.id);
+
+  const [{ data: encounter }, { data: notes }, { data: charges }, { data: noteTemplates }] = await Promise.all([
     supabaseAdmin.from("encounters").select("*, client:client_id(id, first_name, last_name, mrn, preferred_name, insurance_provider)").eq("id", id).single(),
     supabaseAdmin.from("clinical_notes").select("*").eq("encounter_id", id).order("created_at", { ascending: false }),
     supabaseAdmin.from("charges").select("id, cpt_code, cpt_description, charge_amount, status, units, icd10_codes").eq("encounter_id", id).order("created_at", { ascending: false }),
+    supabaseAdmin.from("note_templates").select("id, name, description, sections").eq("organization_id", orgId).eq("is_active", true).order("sort_order").order("created_at"),
   ]);
 
   if (!encounter) notFound();
@@ -174,10 +178,16 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
         <>
           <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden">
             <div className="px-5 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-semibold text-emerald-900">
                   ✓ Signed {isGroup ? "Group Session" : "Progress"} Note
                 </h2>
+                {existingNote.template_id && (() => {
+                  const tpl = (noteTemplates ?? []).find((t: { id: string }) => t.id === existingNote.template_id);
+                  return tpl ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">{tpl.name}</span>
+                  ) : null;
+                })()}
                 {existingNote.is_late_note && (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">⏰ Late Note</span>
                 )}
@@ -187,26 +197,46 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
               </div>
             </div>
             <div className="p-6 space-y-4">
-              {[
-                isGroup
-                  ? [
-                      { label: "S — Session Content", value: existingNote.subjective, color: "border-purple-100 bg-purple-50/30" },
-                      { label: "O — Group Observations", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
-                      { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
-                      { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
-                    ]
-                  : [
-                      { label: "S — Subjective", value: existingNote.subjective, color: "border-blue-100 bg-blue-50/30" },
-                      { label: "O — Objective", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
-                      { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
-                      { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
-                    ],
-              ].flat().map(s => s.value && (
-                <div key={s.label} className={`border rounded-xl p-4 ${s.color}`}>
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{s.label}</div>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.value}</p>
-                </div>
-              ))}
+              {existingNote.template_id && existingNote.custom_content ? (
+                // Custom template note — render sections from template
+                (() => {
+                  const tpl = (noteTemplates ?? []).find((t: { id: string }) => t.id === existingNote.template_id);
+                  const sections = tpl?.sections ?? Object.keys(existingNote.custom_content).map(k => ({ key: k, label: k }));
+                  const sectionColors = ["border-blue-100 bg-blue-50/30", "border-slate-100 bg-slate-50/30", "border-amber-100 bg-amber-50/30", "border-emerald-100 bg-emerald-50/30", "border-purple-100 bg-purple-50/30"];
+                  return sections.map((s: { key: string; label: string }, i: number) => {
+                    const value = existingNote.custom_content?.[s.key];
+                    if (!value) return null;
+                    return (
+                      <div key={s.key} className={`border rounded-xl p-4 ${sectionColors[i % sectionColors.length]}`}>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{s.label}</div>
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{value}</p>
+                      </div>
+                    );
+                  });
+                })()
+              ) : (
+                // SOAP / group note — standard rendering
+                [
+                  isGroup
+                    ? [
+                        { label: "S — Session Content", value: existingNote.subjective, color: "border-purple-100 bg-purple-50/30" },
+                        { label: "O — Group Observations", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
+                        { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
+                        { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
+                      ]
+                    : [
+                        { label: "S — Subjective", value: existingNote.subjective, color: "border-blue-100 bg-blue-50/30" },
+                        { label: "O — Objective", value: existingNote.objective, color: "border-slate-100 bg-slate-50/30" },
+                        { label: "A — Assessment", value: existingNote.assessment, color: "border-amber-100 bg-amber-50/30" },
+                        { label: "P — Plan", value: existingNote.plan, color: "border-emerald-100 bg-emerald-50/30" },
+                      ],
+                ].flat().map(s => s.value && (
+                  <div key={s.label} className={`border rounded-xl p-4 ${s.color}`}>
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{s.label}</div>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.value}</p>
+                  </div>
+                ))
+              )}
               {existingNote.diagnosis_codes?.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {existingNote.diagnosis_codes.map((code: string) => (
@@ -233,11 +263,12 @@ export default async function EncounterDetailPage({ params }: { params: Promise<
           encounterDate={encounter.encounter_date}
         />
       ) : (
-        <SOAPEditor
+        <NoteEditorShell
           encounterId={id}
           existingNote={existingNote}
           clientName={client ? `${client.last_name}, ${client.first_name}` : ""}
           encounterDate={encounter.encounter_date}
+          templates={noteTemplates ?? []}
         />
       )}
     </div>
