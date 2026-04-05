@@ -52,6 +52,7 @@ const navSections: NavSection[] = [
       { href: "/dashboard/safety-plans", label: "Safety Plans", icon: "🛡️" },
       { href: "/dashboard/isp", label: "Support Plans (ISP)", icon: "🧩" },
       { href: "/dashboard/dd-notes", label: "DD Progress Notes", icon: "📝" },
+      { href: "/dashboard/day-program-attendance", label: "Day Program Attendance", icon: "🗓️" },
       { href: "/dashboard/skills", label: "Skill Tracking", icon: "🎯" },
       { href: "/dashboard/emar", label: "eMAR", icon: "💊" },
       { href: "/dashboard/supervisor", label: "Supervisor Review", icon: "✅", permissions: ["supervisor.read"] },
