@@ -25,7 +25,7 @@ export async function getOrgId(clerkUserId: string): Promise<string> {
 export async function getUserProfile(clerkUserId: string) {
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
-    .select("id, organization_id, role, first_name, last_name, credentials, supervisor_id, email")
+    .select("id, organization_id, role, roles, first_name, last_name, credentials, supervisor_id, email")
     .eq("clerk_user_id", clerkUserId)
     .single();
 
