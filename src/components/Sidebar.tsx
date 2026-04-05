@@ -47,6 +47,7 @@ const navSections: NavSection[] = [
       { href: "/dashboard/treatment-plans", label: "Treatment Plans", icon: "📋" },
       { href: "/dashboard/notes", label: "Clinical Notes", icon: "📝" },
       { href: "/dashboard/screenings", label: "Screenings", icon: "🔬" },
+      { href: "/dashboard/peer-support", label: "Peer Support", icon: "🤝" },
       { href: "/dashboard/safety-plans", label: "Safety Plans", icon: "🛡️" },
       { href: "/dashboard/isp", label: "Support Plans (ISP)", icon: "🧩" },
       { href: "/dashboard/dd-notes", label: "DD Progress Notes", icon: "📝" },

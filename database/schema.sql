@@ -1050,6 +1050,72 @@ create unique index if not exists idx_ccbhc_pps_claims_unique
   where status != 'void';
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- CCBHC Peer Support Session Documentation
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create table if not exists peer_support_sessions (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  session_date date not null default current_date,
+  start_time time,
+  end_time time,
+  duration_minutes int,                -- computed or manually entered
+  session_type text not null default 'individual' check (session_type in ('individual', 'group', 'phone', 'telehealth', 'text_outreach', 'community')),
+  location text,                       -- office, home, community, phone, etc.
+  specialist_name text not null,       -- peer support specialist full name
+  specialist_clerk_id text,            -- clerk_user_id if staff member
+  specialist_credentials text,         -- e.g. CPRS, CPS, PRSS
+  -- Session content
+  session_focus text[],                -- multi-select: wellness, employment, housing, recovery, family, etc.
+  session_summary text,                -- narrative summary of the session
+  lived_experience_shared boolean default false,  -- did specialist share their lived experience?
+  lived_experience_notes text,         -- optional: how/why (kept general to protect privacy)
+  -- Recovery-oriented outcomes
+  engagement_level text check (engagement_level in ('fully_engaged', 'partially_engaged', 'minimal_engagement', 'refused')),
+  wellness_plan_reviewed boolean default false,
+  recovery_goals_addressed text,       -- narrative
+  strengths_identified text,
+  barriers_addressed text,
+  -- Safety
+  safety_check_completed boolean default false,
+  crisis_indicated boolean default false,
+  crisis_response_taken text,          -- what was done if crisis_indicated
+  -- Next steps
+  next_session_planned date,
+  next_session_notes text,
+  referrals_made text,                 -- any referrals or linkages to services
+  -- Billing / compliance
+  billing_code text default 'H0038',  -- H0038 = peer support services (CCBHC standard)
+  billing_modifier text,
+  units int default 1,                 -- typically 15-min units
+  is_billable boolean default true,
+  -- Review
+  supervisor_reviewed boolean default false,
+  supervisor_name text,
+  supervisor_reviewed_at timestamptz,
+  notes text,
+  created_by_clerk_id text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_peer_support_org on peer_support_sessions(organization_id, session_date desc);
+create index if not exists idx_peer_support_client on peer_support_sessions(client_id);
+create index if not exists idx_peer_support_specialist on peer_support_sessions(specialist_clerk_id);
+
+alter table peer_support_sessions enable row level security;
+
+create policy "org_peer_support_select" on peer_support_sessions
+  for select using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_peer_support_insert" on peer_support_sessions
+  for insert with check (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_peer_support_update" on peer_support_sessions
+  for update using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_peer_support_delete" on peer_support_sessions
+  for delete using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- HIPAA Privacy Notice Acknowledgments
 -- ─────────────────────────────────────────────────────────────────────────────
 -- HIPAA privacy notice acknowledgments are tracked using the existing
