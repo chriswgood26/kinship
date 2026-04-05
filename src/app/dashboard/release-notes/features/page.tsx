@@ -626,6 +626,220 @@ const FEATURE_DOCS = [
       },
     ],
   },
+
+  // ── v0.8 additions ──────────────────────────────────────────────────────────
+
+  {
+    id: "portal-self-registration",
+    icon: "📝",
+    title: "Portal Self-Registration",
+    summary: "Patients request portal access directly; staff approve or reject",
+    features: [
+      {
+        name: "Share the Self-Registration Link",
+        workflow: [
+          "Admin → 🌐 Patient Portal",
+          "Click the 'Registration Requests' tab",
+          "Your shareable self-registration URL is shown at the top of the page",
+          "Click 📋 Copy Link → paste into your website, email signature, or SMS",
+          "Patients visit the link and complete the short registration form (name, date of birth, email, phone, reason for request)",
+        ],
+        notes: "The registration URL follows the pattern /register/[orgSlug]. It is public — no login required for patients to submit a request.",
+      },
+      {
+        name: "Review & Approve Registration Requests",
+        workflow: [
+          "Admin → 🌐 Patient Portal → Registration Requests tab",
+          "Pending requests show in the queue with a yellow badge count",
+          "Click a request to expand: view submitted name, DOB, email, phone, and reason",
+          "Search for matching client in the dropdown to link the request to an existing record",
+          "Click ✅ Approve → system creates a portal_users record and sends an invite email",
+          "Patient receives email with a link to set their password and access the portal",
+          "Or click ❌ Reject and optionally enter an internal rejection reason",
+        ],
+        notes: "Always link the request to an existing client before approving — this ensures the portal user sees the correct health record.",
+      },
+    ],
+  },
+
+  {
+    id: "claim-denials",
+    icon: "🚫",
+    title: "Claim Denial Management",
+    summary: "Log denials with CARC codes, track appeal status, and record resolutions",
+    features: [
+      {
+        name: "Log a New Claim Denial",
+        workflow: [
+          "Billing → Claim Denials (or click the denial count badge on the main billing page)",
+          "Click + Log Denial",
+          "Select the patient and charge/claim being denied",
+          "Enter the CARC (Claim Adjustment Reason Code) from the EOB or ERA",
+          "Enter the payer denial reason description",
+          "Set the denial date and appeal deadline",
+          "Enter the denied amount",
+          "Click Save → denial appears in the table with 'Not Appealed' status",
+        ],
+        notes: "CARC codes are standard across all payers. Common codes: CO-4 (invalid CPT-modifier), CO-18 (duplicate), CO-29 (timely filing), CO-97 (not covered), PR-1 (deductible).",
+      },
+      {
+        name: "Manage the Appeal Workflow",
+        workflow: [
+          "Billing → Claim Denials → click a denial row",
+          "Click 'Start Appeal' → status moves to Appealing",
+          "Document appeal type: written / peer-to-peer / expedited / external review",
+          "Submit appeal to payer and log submission date",
+          "When payer responds, click 'Log Response' → enter outcome and amount recovered",
+          "Resolution options: Paid in Full / Partial Payment / Denied Upheld / Write-Off",
+          "Denial moves to the Resolved tab with outcome recorded",
+        ],
+        notes: "Keep appeal deadlines visible — most payers have a 60–180 day window. Filter by 'Deadline Soon' to prioritize your worklist.",
+      },
+    ],
+  },
+
+  {
+    id: "claim-appeals",
+    icon: "⚖️",
+    title: "Claim Appeal Tracking",
+    summary: "Dedicated tracker for formal multi-level claim appeals with win-rate reporting",
+    features: [
+      {
+        name: "File a Formal Appeal",
+        workflow: [
+          "Billing → Claim Appeals (or click 'Claim Appeals →' from the Denials page)",
+          "Click + File Appeal",
+          "Select the denial you are appealing from the dropdown",
+          "Choose appeal level: Level 1 / Level 2 / External Review",
+          "Choose appeal type: Written / Peer-to-Peer / Expedited / External Review",
+          "Enter submission date, deadline, payer tracking number, and any notes",
+          "Click File Appeal → appears in the Pending tab",
+        ],
+        notes: "Level 1 appeals are filed directly with the payer. Level 2 may go to the payer's appeals board. External Review goes to an independent review organization (IRO) — typically required by law after Level 2 denial.",
+      },
+      {
+        name: "Log an Appeal Outcome",
+        workflow: [
+          "Billing → Claim Appeals → click a pending appeal",
+          "Click Log Response",
+          "Enter payer response date and outcome: Won / Partial / Denied",
+          "Enter amount recovered (if any)",
+          "Add response notes",
+          "Save → appeal moves to the Won / Partial / Denied tab accordingly",
+        ],
+        notes: "",
+      },
+      {
+        name: "Appeal Summary & Win Rate",
+        workflow: [
+          "Billing → Claim Appeals",
+          "Summary cards at top show: Total Appeals / Pending / Won / Amount Recovered / Win Rate",
+          "Win Rate = (Won + Partial) ÷ Total Resolved × 100",
+          "Use outcome tabs to filter: All / Pending / Won / Partial / Denied",
+        ],
+        notes: "Track win rate by payer over time to identify which denials are worth appealing and which payers are most responsive.",
+      },
+    ],
+  },
+
+  {
+    id: "payer-billing-rules",
+    icon: "🏛️",
+    title: "Payer-Specific Billing Rules",
+    summary: "Medicaid, Medicare, and Medicare Advantage validation rules in the claim scrubber",
+    features: [
+      {
+        name: "Understanding Payer Type Detection",
+        workflow: [
+          "The system auto-detects payer type from the patient's insurance name (e.g. 'Medicaid', 'Medicare', 'Aetna Better Health')",
+          "Detected types: Medicaid / Medicare / Medicare Advantage / Commercial / Self-Pay",
+          "Run Billing → Submit Claims → 🔍 Run Scrub",
+          "Each charge row shows a colored payer type badge (e.g. 🟦 Medicaid, 🟥 Medicare)",
+          "Payer-specific rule codes appear alongside universal billing rules",
+        ],
+        notes: "Payer type detection is keyword-based. If a payer is miscategorized, update the insurance name in the patient record to include the correct keyword (e.g. 'Medicaid', 'Medicare', 'Advantage').",
+      },
+      {
+        name: "Medicaid Rule Codes",
+        workflow: [
+          "MC001 — Service Authorization Advisory: most Medicaid CPT codes require prior authorization",
+          "MC002 — H/T-Code Check: Medicaid-specific H and T codes may require special enrollment",
+          "MC003 — Timely Filing: Medicaid window is 365 days; warning fires at 270 days",
+          "MC004 — Enrollment Verification: confirm provider is enrolled with the specific Medicaid MCO",
+          "Fix flagged issues in the scrubber before downloading the 837P file",
+        ],
+        notes: "",
+      },
+      {
+        name: "Medicare Rule Codes",
+        workflow: [
+          "MR001 — Medicaid-Only Code Error: H/T codes are not covered by Medicare — recode before submitting",
+          "MR002 — Telehealth Modifier: telehealth claims need GT (synchronous) or 95 modifier",
+          "MR003 — Timely Filing: Medicare window is 1 year (365 days); warning at 300 days",
+          "MR004 — Functional Limitation Documentation: ensure clinical notes document functional impairment",
+          "MR005 — Psych Eval PA: psychiatric evaluations may require prior authorization under Medicare",
+        ],
+        notes: "Medicare Advantage (MAR001–MAR003) follows similar rules but each plan sets its own PA requirements. Always verify with the specific plan.",
+      },
+    ],
+  },
+
+  {
+    id: "settings-note-templates",
+    icon: "⚙️",
+    title: "Settings & Note Templates",
+    summary: "Modular searchable settings page with custom clinical note templates",
+    features: [
+      {
+        name: "Navigating the New Settings Page",
+        workflow: [
+          "Admin → Settings (or Organization → Settings in sidebar)",
+          "Settings are organized into collapsible modules: Organization, Referrals, Scheduling, Billing, Clinical, Note Templates, Plan & Billing",
+          "Use the 🔍 Search settings box at the top to find any setting by keyword",
+          "Matching modules auto-expand and highlight relevant fields",
+          "Each module has its own Save button — changes in one module do not affect others",
+          "Non-admin users see a read-only notice and cannot save changes",
+        ],
+        notes: "All sections are open by default except Note Templates. Click a section header to collapse/expand it.",
+      },
+      {
+        name: "Creating a Custom Note Template",
+        workflow: [
+          "Admin → Settings → Note Templates section",
+          "Click + New Template",
+          "Choose a starting preset: DAP (Data / Assessment / Plan), BIRP (Behavior / Intervention / Response / Plan), GIRP (Goal / Intervention / Response / Plan), or Custom",
+          "Name the template (e.g. 'Crisis Note', 'Group Therapy DAP')",
+          "Add, reorder, or rename sections as needed",
+          "Mark sections as required or optional",
+          "Click Save Template → template is available for use in encounters",
+        ],
+        notes: "SOAP is always available as a built-in template regardless of your custom templates. Custom templates appear in the template selector when starting a new note.",
+      },
+      {
+        name: "Using a Custom Template in an Encounter",
+        workflow: [
+          "Open an encounter (from patient detail, scheduling, or Encounters list)",
+          "In the note editor, click the template selector dropdown at the top",
+          "Choose your custom template (e.g. 'DAP', 'BIRP') or 'SOAP Note'",
+          "Template sections render as separate text areas",
+          "Note auto-saves every 30 seconds — a 'Saved' indicator appears",
+          "If the encounter date is in the past, a 'Late Note' banner appears for documentation",
+          "Click Sign & Lock → note is timestamped and locked; all sections display in the signed view",
+        ],
+        notes: "You cannot change the template after a note has been started. If you need to switch templates, delete the draft and start fresh.",
+      },
+      {
+        name: "Archiving or Editing a Template",
+        workflow: [
+          "Admin → Settings → Note Templates section",
+          "Click the template name to expand it",
+          "Edit sections, required fields, or the template name → Save",
+          "Click Archive to deactivate the template — it will no longer appear in the note selector but existing notes using it are preserved",
+        ],
+        notes: "Archived templates can be restored by an admin. Deleting a template is not supported to preserve historical note integrity.",
+      },
+    ],
+  },
 ];
 
 export default function FeatureDocsPage() {
@@ -656,7 +870,7 @@ export default function FeatureDocsPage() {
         <a href="/dashboard/release-notes" className="text-slate-400 hover:text-slate-700 text-sm">← Release Notes</a>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Feature Documentation</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Step-by-step workflows for all modules — v0.5 POC</p>
+          <p className="text-slate-500 text-sm mt-0.5">Step-by-step workflows for all modules — v0.8</p>
         </div>
       </div>
 

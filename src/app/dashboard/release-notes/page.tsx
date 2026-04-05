@@ -8,6 +8,52 @@ export default async function ReleaseNotesPage() {
 
   const releases = [
     {
+      version: "v0.8",
+      date: "2026-04-05",
+      label: "Phase 8 — Billing Intelligence, Portal & Settings",
+      labelColor: "bg-indigo-100 text-indigo-700",
+      features: [
+        // Patient Portal Self-Registration
+        "Patient Portal Self-Registration — public /register/[orgSlug] page where patients submit portal access requests without staff involvement",
+        "Registration Approval Workflow — staff review pending requests in Portal Management → Registration Requests tab; approve (links to client record + sends invite email) or reject with optional reason",
+        "Shareable Registration URL — one-click copy of the public registration link for distribution via email/SMS/website",
+        "portal_registration_requests Table — stores pending submissions with status (pending/approved/rejected) and org scoping",
+
+        // Claim Denial Management
+        "Claim Denial Management — new /dashboard/billing/denials module to log, track, and resolve claim denials with CARC reason codes",
+        "CARC Reason Codes — standard Claim Adjustment Reason Codes documented on each denial for payer-specific analysis",
+        "Denial Appeal Workflow — track appeal status (not appealed → appealing → appealed), deadlines, and resolution per denial",
+        "Denial Resolution Tracking — log outcomes (paid, partial payment, denied upheld, write-off) with amounts recovered",
+        "Denial Status Badge — billing page shows denial count badge linking directly to the denials screen",
+
+        // Claim Appeal Tracking
+        "Claim Appeal Tracking — dedicated /dashboard/billing/appeals module for formal appeal submissions (separate from authorization appeals)",
+        "Multiple Appeal Levels — support Level 1, Level 2, and External Review appeal submissions per claim",
+        "Appeal Types — written, peer-to-peer, expedited, and external review appeal tracking",
+        "Win Rate Metric — appeals tracker shows overall win rate and amount recovered across all appeals",
+        "Appeal Outcome Tabs — filter by outcome: pending, won, partial, denied",
+        "Payer Tracking Numbers — store payer-assigned appeal reference numbers and submission deadlines",
+
+        // Medicaid/Medicare Payer Rules
+        "Medicaid/Medicare Payer-Specific Billing Rules — payerRules.ts with automatic payer type detection (Medicaid, Medicare, Medicare Advantage, Commercial, Self-Pay)",
+        "Medicaid Rules — MC001 service auth advisory, MC002 H/T-code eligibility check, MC003 365-day timely filing window (warning at 270 days), MC004 enrollment verification reminder",
+        "Medicare Rules — MR001 Medicaid-only code error, MR002 telehealth GT/95 modifier advisory, MR003 1-year timely filing (warning at 300 days), MR004 functional limitation documentation, MR005 psych eval PA note",
+        "Medicare Advantage Rules — MAR001 non-covered code error, MAR002 PA advisory, MAR003 telehealth modifier reminder",
+        "Payer Type Badge in Claim Scrubber — each charge shows detected payer type (Medicaid/Medicare/etc.) with rule codes in the scrubber legend",
+
+        // Settings & Note Templates
+        "Modular Settings Page — org settings reorganized into searchable modules: Organization, Referrals, Scheduling, Billing, Clinical, Note Templates, Plan & Billing",
+        "Settings Global Search — real-time search filters modules and individual settings; matching sections auto-expand",
+        "Per-Module Save Buttons — each settings module has its own save button with saving/saved state feedback",
+        "Note Templates System — create custom note formats (DAP, BIRP, GIRP, or fully custom) from Admin → Settings → Note Templates",
+        "Built-in Template Presets — start from 4 presets: DAP, BIRP, GIRP, and Custom; SOAP always available as built-in",
+        "Custom Note Editor — dynamic section rendering with auto-save, late-note detection, and sign & lock",
+        "Template Selector in Encounter — NoteEditorShell picks SOAP or custom template when starting a new note; switches seamlessly",
+        "Signed Custom Note Display — signed custom-template notes display all sections correctly in the locked view",
+        "Time Entry Activity Category — time entries now derive and store activity_category from activity_type for reporting",
+      ],
+    },
+    {
       version: "v0.7",
       date: "2026-04-04",
       label: "Phase 7 — Security, Compliance & Clinical Intelligence",
@@ -416,9 +462,9 @@ export default async function ReleaseNotesPage() {
   ];
 
   const stats = [
-    { value: "30+", label: "Modules" },
-    { value: "100+", label: "Pages" },
-    { value: "70+", label: "API Routes" },
+    { value: "35+", label: "Modules" },
+    { value: "110+", label: "Pages" },
+    { value: "80+", label: "API Routes" },
     { value: "72%", label: "Fewer Clicks vs Legacy" },
   ];
 
@@ -442,7 +488,7 @@ export default async function ReleaseNotesPage() {
             </div>
           ))}
         </div>
-        <div className="mt-4 text-center text-slate-400 text-xs">Kinship EHR · v0.7</div>
+        <div className="mt-4 text-center text-slate-400 text-xs">Kinship EHR · v0.8</div>
       </div>
 
       {releases.map(release => (
@@ -498,7 +544,7 @@ export default async function ReleaseNotesPage() {
 
       <div className="bg-teal-50 rounded-2xl border border-teal-100 p-5 text-center">
         <p className="text-teal-800 text-sm font-medium">Built by Chris Goodbaudy + Jarvis (AI)</p>
-        <p className="text-teal-600 text-xs mt-1">Kinship EHR — Modern Behavioral Health & DD EHR · v0.7</p>
+        <p className="text-teal-600 text-xs mt-1">Kinship EHR — Modern Behavioral Health & DD EHR · v0.8</p>
       </div>
     </div>
   );
