@@ -973,3 +973,56 @@ alter table user_profiles add column if not exists is_provider boolean default f
 -- Multi-role migration: convert single role text to roles array
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS roles text[] DEFAULT '{clinician}';
 UPDATE user_profiles SET roles = ARRAY[role] WHERE roles IS NULL OR roles = '{}';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- CCBHC Prospective Payment System (PPS)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Per-org PPS rate configuration (one active record per org at a time)
+create table if not exists ccbhc_pps_settings (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  methodology text not null check (methodology in ('pps1_daily', 'pps2_monthly')),
+  daily_rate decimal(10,2),          -- PPS-1: per-diem rate per qualifying client per day
+  monthly_rate decimal(10,2),        -- PPS-2: per-member per month rate
+  billing_code text not null default 'T1015',  -- procedure code on PPS claim (often T1015 or state-specific)
+  billing_modifier text,             -- optional modifier (e.g. U1, HQ, state-specific)
+  effective_date date not null default current_date,
+  state_program_id text,             -- state-assigned CCBHC program identifier
+  notes text,
+  is_active boolean not null default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_ccbhc_pps_settings_org on ccbhc_pps_settings(organization_id);
+
+-- PPS claim records — one per client per qualifying day (PPS-1) or month (PPS-2)
+create table if not exists ccbhc_pps_claims (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  methodology text not null check (methodology in ('pps1_daily', 'pps2_monthly')),
+  period_start date not null,        -- PPS-1: the qualifying service date; PPS-2: first day of month
+  period_end date not null,          -- PPS-1: same as period_start; PPS-2: last day of month
+  rate_applied decimal(10,2) not null,
+  charge_amount decimal(10,2) not null,
+  billing_code text not null default 'T1015',
+  billing_modifier text,
+  icd10_codes text[] default '{}',
+  status text not null default 'draft' check (status in ('draft','pending','submitted','paid','denied','void')),
+  charge_id uuid references charges(id) on delete set null,   -- linked standard charge if converted
+  qualifying_encounter_ids text[] default '{}',               -- encounter IDs that triggered this PPS day
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_ccbhc_pps_claims_org on ccbhc_pps_claims(organization_id, period_start desc);
+create index if not exists idx_ccbhc_pps_claims_client on ccbhc_pps_claims(client_id);
+create index if not exists idx_ccbhc_pps_claims_status on ccbhc_pps_claims(status);
+
+-- Unique constraint: one non-void PPS claim per client per period per methodology
+create unique index if not exists idx_ccbhc_pps_claims_unique
+  on ccbhc_pps_claims(organization_id, client_id, period_start, period_end)
+  where status != 'void';
