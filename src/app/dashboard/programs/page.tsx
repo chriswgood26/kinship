@@ -9,6 +9,7 @@ interface Program {
   description: string | null; capacity: number | null; is_active: boolean;
   location_id: string | null;
   location: Location | null;
+  enabled_note_types: string[] | null;
 }
 interface Enrollment { id: string; patient: { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null }; status: string; admission_date: string; discharge_date: string | null; assigned_worker: string | null; }
 interface AssessmentRequirement {
@@ -19,6 +20,15 @@ interface AssessmentRequirement {
   reminder_days_before: number;
   notes: string | null;
 }
+
+const NOTE_TYPES = [
+  { key: "soap", label: "SOAP Notes", description: "Subjective, Objective, Assessment, Plan progress notes", icon: "📝" },
+  { key: "dd_notes", label: "DD Notes", description: "Developmental disability service documentation", icon: "🧩" },
+  { key: "group", label: "Group Notes", description: "Group therapy and group service notes", icon: "👥" },
+  { key: "case_mgmt", label: "Case Management Notes", description: "Case coordination, referrals, and service linkage notes", icon: "📋" },
+];
+
+const ALL_NOTE_TYPE_KEYS = NOTE_TYPES.map(n => n.key);
 
 const PROGRAM_TYPES = ["outpatient", "intensive_outpatient", "partial_hospitalization", "residential", "crisis", "day_program", "community_support", "dd_waiver", "ccbhc", "other"];
 const TYPE_LABELS: Record<string, string> = {
@@ -66,7 +76,8 @@ export default function ProgramsPage() {
   const [showNew, setShowNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [locationFilter, setLocationFilter] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"census" | "assessments">("census");
+  const [activeTab, setActiveTab] = useState<"census" | "assessments" | "note_types">("census");
+  const [savingNoteTypes, setSavingNoteTypes] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", program_type: "outpatient", description: "", capacity: "", location_id: "" });
 
   // Assessment requirement form state
@@ -172,6 +183,24 @@ export default function ProgramsPage() {
     if (!selected) return;
     await fetch(`/api/program-assessment-requirements?id=${id}`, { method: "DELETE", credentials: "include" });
     loadRequirements(selected.id);
+  }
+
+  async function toggleNoteType(noteTypeKey: string, enabled: boolean) {
+    if (!selected) return;
+    setSavingNoteTypes(true);
+    const current = selected.enabled_note_types ?? ALL_NOTE_TYPE_KEYS;
+    const updated = enabled
+      ? [...current.filter(k => k !== noteTypeKey), noteTypeKey]
+      : current.filter(k => k !== noteTypeKey);
+    const res = await fetch("/api/programs", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ id: selected.id, enabled_note_types: updated }),
+    });
+    if (res.ok) {
+      setSelected(s => s ? { ...s, enabled_note_types: updated } : s);
+      setPrograms(ps => ps.map(p => p.id === selected.id ? { ...p, enabled_note_types: updated } : p));
+    }
+    setSavingNoteTypes(false);
   }
 
   const activeEnrollments = enrollments.filter(e => e.status === "active");
@@ -335,6 +364,11 @@ export default function ProgramsPage() {
                   Assessment Requirements
                   {requirements.length > 0 && <span className="ml-1.5 bg-teal-100 text-teal-700 text-xs px-1.5 py-0.5 rounded-full">{requirements.length}</span>}
                 </button>
+                <button
+                  onClick={() => setActiveTab("note_types")}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === "note_types" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  Note Types
+                </button>
               </div>
 
               {/* Census tab */}
@@ -374,6 +408,60 @@ export default function ProgramsPage() {
                       </tbody>
                     </table>
                   )}
+                </div>
+              )}
+
+              {/* Note types tab */}
+              {activeTab === "note_types" && (
+                <div className="space-y-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                    <span className="font-semibold">Note type enablement</span> controls which documentation formats are available for clinicians when recording services for clients in <strong>{selected.name}</strong>. Disabled note types will be hidden when creating notes for this program.
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Enabled Note Types</h3>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {NOTE_TYPES.map(noteType => {
+                        const enabledTypes = selected.enabled_note_types ?? ALL_NOTE_TYPE_KEYS;
+                        const isEnabled = enabledTypes.includes(noteType.key);
+                        return (
+                          <div key={noteType.key} className="px-5 py-4 flex items-center justify-between hover:bg-slate-50">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{noteType.icon}</span>
+                              <div>
+                                <div className="font-semibold text-slate-900 text-sm">{noteType.label}</div>
+                                <div className="text-xs text-slate-400 mt-0.5">{noteType.description}</div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => toggleNoteType(noteType.key, !isEnabled)}
+                              disabled={savingNoteTypes}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${isEnabled ? "bg-teal-500" : "bg-slate-200"}`}
+                              role="switch"
+                              aria-checked={isEnabled}
+                              title={isEnabled ? `Disable ${noteType.label}` : `Enable ${noteType.label}`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isEnabled ? "translate-x-5" : "translate-x-0"}`}
+                              />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
+                      <p className="text-xs text-slate-400">
+                        {(() => {
+                          const enabledTypes = selected.enabled_note_types ?? ALL_NOTE_TYPE_KEYS;
+                          const count = NOTE_TYPES.filter(n => enabledTypes.includes(n.key)).length;
+                          return `${count} of ${NOTE_TYPES.length} note types enabled`;
+                        })()}
+                        {savingNoteTypes && <span className="ml-2 text-teal-600">Saving...</span>}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
