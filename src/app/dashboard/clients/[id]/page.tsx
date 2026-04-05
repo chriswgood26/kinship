@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CareTeam from "@/components/CareTeam";
 import PatientPhotoUpload from "@/components/PatientPhotoUpload";
+import CollapsibleCard from "@/components/CollapsibleCard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getOrgId } from "@/lib/getOrgId";
 import { currentUser } from "@clerk/nextjs/server";
@@ -130,36 +131,40 @@ export default async function ClientDetailPage({
       {activeTab === "overview" && <div className="grid grid-cols-3 gap-5">
         {/* Left col */}
         <div className="col-span-2 space-y-5">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-semibold text-slate-900 mb-4">Demographics</h2>
-            <dl className="grid grid-cols-3 gap-x-6 gap-y-4">
-              <InfoRow label="First Name" value={client.first_name} />
-              <InfoRow label="Last Name" value={client.last_name} />
-              <InfoRow label="Preferred Name" value={client.preferred_name} />
-              <InfoRow label="Date of Birth" value={client.date_of_birth} />
-              <InfoRow label="Gender" value={client.gender} />
-              <InfoRow label="Pronouns" value={client.pronouns} />
-              <InfoRow label="Race" value={client.race} />
-              <InfoRow label="Ethnicity" value={client.ethnicity} />
-              <InfoRow label="Language" value={client.primary_language} />
-            </dl>
-          </div>
+          <CollapsibleCard id="client-demographics" title="Demographics">
+            <div className="p-6">
+              <dl className="grid grid-cols-3 gap-x-6 gap-y-4">
+                <InfoRow label="First Name" value={client.first_name} />
+                <InfoRow label="Last Name" value={client.last_name} />
+                <InfoRow label="Preferred Name" value={client.preferred_name} />
+                <InfoRow label="Date of Birth" value={client.date_of_birth} />
+                <InfoRow label="Gender" value={client.gender} />
+                <InfoRow label="Pronouns" value={client.pronouns} />
+                <InfoRow label="Race" value={client.race} />
+                <InfoRow label="Ethnicity" value={client.ethnicity} />
+                <InfoRow label="Language" value={client.primary_language} />
+              </dl>
+            </div>
+          </CollapsibleCard>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-semibold text-slate-900 mb-4">Contact</h2>
-            <dl className="grid grid-cols-3 gap-x-6 gap-y-4">
-              <InfoRow label="Phone" value={client.phone_primary} />
-              <InfoRow label="Email" value={client.email} />
-              <div className="col-span-3"><InfoRow label="Address" value={[client.address_line1, client.city && `${client.city}, ${client.state} ${client.zip}`].filter(Boolean).join(", ")} /></div>
-            </dl>
-          </div>
+          <CollapsibleCard id="client-contact" title="Contact">
+            <div className="p-6">
+              <dl className="grid grid-cols-3 gap-x-6 gap-y-4">
+                <InfoRow label="Phone" value={client.phone_primary} />
+                <InfoRow label="Email" value={client.email} />
+                <div className="col-span-3"><InfoRow label="Address" value={[client.address_line1, client.city && `${client.city}, ${client.state} ${client.zip}`].filter(Boolean).join(", ")} /></div>
+              </dl>
+            </div>
+          </CollapsibleCard>
 
           {/* Recent encounters */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-900">Recent Encounters</h2>
+          <CollapsibleCard
+            id="client-encounters"
+            title="Recent Encounters"
+            headerRight={
               <Link href={`/dashboard/encounters/new?client_id=${client.id}`} className="text-xs text-teal-600 font-medium hover:text-teal-700">+ New</Link>
-            </div>
+            }
+          >
             {!encounters?.length ? (
               <div className="p-6 text-center text-slate-400 text-sm">No encounters yet</div>
             ) : (
@@ -175,85 +180,101 @@ export default async function ClientDetailPage({
                 ))}
               </div>
             )}
-          </div>
+          </CollapsibleCard>
         </div>
 
         {/* Right sidebar */}
         <div className="space-y-5">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <h2 className="font-semibold text-slate-900 text-sm mb-3">Upcoming Appointments</h2>
-            {!appointments?.length ? (
-              <div className="text-xs text-slate-400">No upcoming appointments</div>
-            ) : (
-              <div className="space-y-2">
-                {appointments.map(appt => (
-                  <div key={appt.id} className="text-sm">
-                    <div className="font-medium text-slate-900">{appt.appointment_type}</div>
-                    <div className="text-xs text-slate-400">{appt.appointment_date}{appt.start_time && ` · ${appt.start_time.slice(0,5)}`}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <h2 className="font-semibold text-slate-900 text-sm mb-3">Insurance</h2>
-            <dl className="space-y-2">
-              <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">Primary</div>
-              <InfoRow label="Provider" value={client.insurance_provider} />
-              <InfoRow label="Member ID" value={client.insurance_member_id} />
-              <InfoRow label="Group #" value={client.insurance_group_number} />
-              {(client.insurance_secondary_provider) && (
-                <>
-                  <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mt-3 mb-1">Secondary</div>
-                  <InfoRow label="Provider" value={client.insurance_secondary_provider} />
-                  <InfoRow label="Member ID" value={client.insurance_secondary_member_id} />
-                  {client.insurance_secondary_group_number && <InfoRow label="Group #" value={client.insurance_secondary_group_number} />}
-                </>
+          <CollapsibleCard id="client-appointments" title="Upcoming Appointments">
+            <div className="p-5">
+              {!appointments?.length ? (
+                <div className="text-xs text-slate-400">No upcoming appointments</div>
+              ) : (
+                <div className="space-y-2">
+                  {appointments.map(appt => (
+                    <div key={appt.id} className="text-sm">
+                      <div className="font-medium text-slate-900">{appt.appointment_type}</div>
+                      <div className="text-xs text-slate-400">{appt.appointment_date}{appt.start_time && ` · ${appt.start_time.slice(0,5)}`}</div>
+                    </div>
+                  ))}
+                </div>
               )}
-              {(client.insurance_tertiary_provider) && (
-                <>
-                  <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mt-3 mb-1">Tertiary</div>
-                  <InfoRow label="Provider" value={client.insurance_tertiary_provider} />
-                  <InfoRow label="Member ID" value={client.insurance_tertiary_member_id} />
-                  {client.insurance_tertiary_group_number && <InfoRow label="Group #" value={client.insurance_tertiary_group_number} />}
-                </>
-              )}
-            </dl>
-          </div>
+            </div>
+          </CollapsibleCard>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-slate-900 text-sm">Allergies</h2>
+          <CollapsibleCard id="client-insurance" title="Insurance">
+            <div className="p-5">
+              <dl className="space-y-2">
+                <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">Primary</div>
+                <InfoRow label="Provider" value={client.insurance_provider} />
+                <InfoRow label="Member ID" value={client.insurance_member_id} />
+                <InfoRow label="Group #" value={client.insurance_group_number} />
+                {(client.insurance_secondary_provider) && (
+                  <>
+                    <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mt-3 mb-1">Secondary</div>
+                    <InfoRow label="Provider" value={client.insurance_secondary_provider} />
+                    <InfoRow label="Member ID" value={client.insurance_secondary_member_id} />
+                    {client.insurance_secondary_group_number && <InfoRow label="Group #" value={client.insurance_secondary_group_number} />}
+                  </>
+                )}
+                {(client.insurance_tertiary_provider) && (
+                  <>
+                    <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mt-3 mb-1">Tertiary</div>
+                    <InfoRow label="Provider" value={client.insurance_tertiary_provider} />
+                    <InfoRow label="Member ID" value={client.insurance_tertiary_member_id} />
+                    {client.insurance_tertiary_group_number && <InfoRow label="Group #" value={client.insurance_tertiary_group_number} />}
+                  </>
+                )}
+              </dl>
+            </div>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="client-allergies"
+            title="Allergies"
+            headerRight={
               <a href={`/dashboard/clients/${id}?tab=allergies`} className="text-xs text-teal-600 font-medium hover:text-teal-700">View all</a>
+            }
+          >
+            <div className="p-5">
+              <AllergyWidget clientId={id} />
             </div>
-            <AllergyWidget clientId={id} />
-          </div>
+          </CollapsibleCard>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <h2 className="font-semibold text-slate-900 text-sm mb-3">Emergency Contact</h2>
-            <dl className="space-y-2">
-              <InfoRow label="Name" value={client.emergency_contact_name} />
-              <InfoRow label="Phone" value={client.emergency_contact_phone} />
-              <InfoRow label="Relationship" value={client.emergency_contact_relationship} />
-            </dl>
-          </div>
+          <CollapsibleCard id="client-emergency-contact" title="Emergency Contact">
+            <div className="p-5">
+              <dl className="space-y-2">
+                <InfoRow label="Name" value={client.emergency_contact_name} />
+                <InfoRow label="Phone" value={client.emergency_contact_phone} />
+                <InfoRow label="Relationship" value={client.emergency_contact_relationship} />
+              </dl>
+            </div>
+          </CollapsibleCard>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-slate-900 text-sm">🏠 Housing Status</h2>
+          <CollapsibleCard
+            id="client-housing"
+            title="Housing Status"
+            icon="🏠"
+            headerRight={
               <Link href={`/dashboard/clients/${id}/housing`} className="text-xs text-teal-600 font-medium hover:text-teal-700">Manage →</Link>
+            }
+          >
+            <div className="p-5">
+              <HousingStatusWidget clientId={id} />
             </div>
-            <HousingStatusWidget clientId={id} />
-          </div>
+          </CollapsibleCard>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-slate-900 text-sm">Programs & Requirements</h2>
+          <CollapsibleCard
+            id="client-programs"
+            title="Programs & Requirements"
+            headerRight={
               <Link href="/dashboard/programs" className="text-xs text-teal-600 font-medium hover:text-teal-700">All programs →</Link>
+            }
+          >
+            <div className="p-5">
+              <ClientProgramRequirementsWidget clientId={id} orgId={orgId} />
             </div>
-            <ClientProgramRequirementsWidget clientId={id} orgId={orgId} />
-          </div>
+          </CollapsibleCard>
         </div>
       </div>}
     </div>
