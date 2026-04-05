@@ -1352,6 +1352,9 @@ alter table clients add column if not exists primary_clinician_name text;
 
 create index if not exists idx_clients_primary_clinician on clients(primary_clinician_id) where primary_clinician_id is not null;
 
+-- Caseload capacity: optional max panel size per clinician
+alter table user_profiles add column if not exists caseload_capacity int check (caseload_capacity > 0);
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Extended insurance fields (populated by OCR insurance card capture)
 -- ─────────────────────────────────────────────────────────────────────────────

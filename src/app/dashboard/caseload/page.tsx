@@ -31,7 +31,7 @@ export default async function CaseloadPage() {
   const [{ data: clinicians }, { data: allClients }] = await Promise.all([
     supabaseAdmin
       .from("user_profiles")
-      .select("id, first_name, last_name, credentials, role, roles, title")
+      .select("id, first_name, last_name, credentials, role, roles, title, caseload_capacity")
       .eq("organization_id", orgId)
       .eq("is_active", true)
       .order("last_name"),
@@ -68,6 +68,7 @@ export default async function CaseloadPage() {
       role: c.role,
       count: countMap[c.id]?.active || 0,
       total_count: countMap[c.id]?.total || 0,
+      caseload_capacity: c.caseload_capacity ?? null,
     }))
     .sort((a, b) => b.count - a.count);
 
