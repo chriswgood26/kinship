@@ -484,9 +484,19 @@ create table if not exists portal_users (
   relationship text default 'self',   -- self, parent, guardian, caregiver, authorized_rep
   is_active boolean default true,
   access_settings jsonb default '{"messages": true, "appointments": true, "documents": false}',
+  invite_token text unique,           -- secure random token for invitation link
+  invite_expires_at timestamptz,      -- token expiry (72 hours from creation)
+  invite_accepted_at timestamptz,     -- when the invitation was accepted (account linked)
+  invited_by text,                    -- clerk_user_id of staff who sent the invite
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Migration: add invite columns if upgrading from earlier schema
+alter table portal_users add column if not exists invite_token text unique;
+alter table portal_users add column if not exists invite_expires_at timestamptz;
+alter table portal_users add column if not exists invite_accepted_at timestamptz;
+alter table portal_users add column if not exists invited_by text;
 
 create index if not exists idx_portal_users_org on portal_users(organization_id);
 create index if not exists idx_portal_users_client on portal_users(client_id);

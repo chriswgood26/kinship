@@ -7,6 +7,7 @@ interface Patient { id: string; first_name: string; last_name: string; mrn: stri
 interface PortalUser {
   id: string; client_id: string; email: string; first_name: string | null; last_name: string | null;
   relationship: string; is_active: boolean; access_settings: Record<string, boolean>;
+  invite_accepted_at?: string | null; invite_expires_at?: string | null; clerk_user_id?: string | null;
   patient?: Patient | Patient[] | null;
 }
 
@@ -52,6 +53,7 @@ export default function PortalManagementClient({ portalUsers, patients }: { port
   });
 
   const [editAccess, setEditAccess] = useState<Record<string, boolean>>({});
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   function setRelationship(rel: string) {
     setInviteForm(f => ({ ...f, relationship: rel, access_settings: { ...DEFAULT_ACCESS[rel] || DEFAULT_ACCESS.other } }));
@@ -72,6 +74,17 @@ export default function PortalManagementClient({ portalUsers, patients }: { port
     setTimeout(() => setSuccess(""), 3000);
   }
 
+  async function resendInvite(pu: PortalUser) {
+    setResendingId(pu.id);
+    const res = await fetch(`/api/portal/users/${pu.id}/invite`, {
+      method: "POST", credentials: "include",
+    });
+    setResendingId(null);
+    if (res.ok) { setSuccess(`Invitation resent to ${pu.email}`); }
+    else { const d = await res.json(); setSuccess(`Error: ${d.error}`); }
+    setTimeout(() => setSuccess(""), 4000);
+  }
+
   async function toggleActive(pu: PortalUser) {
     await fetch(`/api/portal/users/${pu.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
@@ -89,8 +102,14 @@ export default function PortalManagementClient({ portalUsers, patients }: { port
     });
     const data = await res.json();
     setSaving(false);
-    if (res.ok) { setSuccess(`Portal account created for ${inviteForm.email}`); setShowInvite(false); router.refresh(); }
-    else { setSuccess(`Error: ${data.error}`); }
+    if (res.ok) {
+      const msg = data.emailSent
+        ? `Invitation email sent to ${inviteForm.email}`
+        : `Portal account created for ${inviteForm.email} — email service not configured`;
+      setSuccess(msg);
+      setShowInvite(false);
+      router.refresh();
+    } else { setSuccess(`Error: ${data.error}`); }
     setTimeout(() => setSuccess(""), 4000);
   }
 
@@ -164,8 +183,8 @@ export default function PortalManagementClient({ portalUsers, patients }: { port
             </div>
           </div>
 
-          <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700">
-            ⚕️ After creating the account, go to Clerk dashboard and invite this email address so they can set their password and log in at <strong>/portal/dashboard</strong>
+          <div className="bg-teal-50 border border-teal-100 rounded-xl px-4 py-3 text-xs text-teal-700">
+            ✉️ An invitation email will be sent automatically to this address with a link to create their portal account.
           </div>
 
           <div className="flex gap-3">
@@ -189,6 +208,15 @@ export default function PortalManagementClient({ portalUsers, patients }: { port
           <div className="divide-y divide-slate-50">
             {portalUsers.map(pu => {
               const patient = Array.isArray(pu.patient) ? pu.patient[0] : pu.patient;
+              const isLinked = pu.clerk_user_id && !pu.clerk_user_id.startsWith("portal_pending_");
+              const inviteExpired = pu.invite_expires_at && new Date(pu.invite_expires_at) < new Date();
+              const inviteStatus = pu.invite_accepted_at && isLinked
+                ? { label: "Signed up", cls: "bg-emerald-100 text-emerald-700" }
+                : pu.invite_accepted_at && !isLinked
+                ? { label: "Invite opened", cls: "bg-blue-100 text-blue-700" }
+                : inviteExpired
+                ? { label: "Invite expired", cls: "bg-amber-100 text-amber-700" }
+                : { label: "Invite pending", cls: "bg-slate-100 text-slate-500" };
               return (
                 <div key={pu.id}>
                   <div className={`flex items-start gap-4 px-5 py-4 ${!pu.is_active ? "opacity-50" : ""}`}>
@@ -200,6 +228,7 @@ export default function PortalManagementClient({ portalUsers, patients }: { port
                         <span className="font-semibold text-slate-900 text-sm">{pu.first_name} {pu.last_name}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${REL_COLORS[pu.relationship] || "bg-slate-100 text-slate-500"}`}>{pu.relationship?.replace("_", " ")}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pu.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>{pu.is_active ? "Active" : "Inactive"}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${inviteStatus.cls}`}>{inviteStatus.label}</span>
                       </div>
                       <div className="text-xs text-slate-400 mt-0.5">{pu.email}</div>
                       <div className="text-xs text-slate-500 mt-0.5">
@@ -211,7 +240,13 @@ export default function PortalManagementClient({ portalUsers, patients }: { port
                         ))}
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                      {!isLinked && (
+                        <button onClick={() => resendInvite(pu)} disabled={resendingId === pu.id}
+                          className="text-xs text-blue-600 font-medium hover:text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg disabled:opacity-50">
+                          {resendingId === pu.id ? "Sending..." : "Resend Invite"}
+                        </button>
+                      )}
                       <button onClick={() => editingId === pu.id ? setEditingId(null) : startEdit(pu)} className="text-xs text-teal-600 font-medium hover:text-teal-700 border border-teal-200 px-2.5 py-1 rounded-lg">
                         {editingId === pu.id ? "Cancel" : "Edit Access"}
                       </button>

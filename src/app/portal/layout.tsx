@@ -7,13 +7,35 @@ export default async function PortalLayout({ children }: { children: React.React
   const user = await currentUser();
   if (!user) redirect("/portal/sign-in");
 
-  // Check if this Clerk user is a portal user
-  const { data: portalUser } = await supabaseAdmin
+  // Check if this Clerk user is a portal user (by clerk_user_id)
+  let { data: portalUser } = await supabaseAdmin
     .from("portal_users")
     .select("*, client:client_id(first_name, last_name, preferred_name)")
     .eq("clerk_user_id", user.id)
     .eq("is_active", true)
     .single();
+
+  // First-time sign-in: if no match by clerk_user_id, try matching by email
+  // (pending accounts have clerk_user_id = "portal_pending_*")
+  if (!portalUser && user.emailAddresses?.length) {
+    const emails = user.emailAddresses.map((e) => e.emailAddress);
+    const { data: pendingUser } = await supabaseAdmin
+      .from("portal_users")
+      .select("*, client:client_id(first_name, last_name, preferred_name)")
+      .in("email", emails)
+      .eq("is_active", true)
+      .like("clerk_user_id", "portal_pending_%")
+      .single();
+
+    if (pendingUser) {
+      // Link the real Clerk user ID to this portal account
+      await supabaseAdmin
+        .from("portal_users")
+        .update({ clerk_user_id: user.id })
+        .eq("id", pendingUser.id);
+      portalUser = { ...pendingUser, clerk_user_id: user.id };
+    }
+  }
 
   if (!portalUser) {
     // Not a portal user — check if staff and redirect to dashboard
