@@ -143,6 +143,7 @@ export default async function ReportsPage() {
             { label: "Medicaid Compliance Export", desc: "State Medicaid client services & billing export", href: "/dashboard/reports/medicaid", icon: "🏥", highlight: false },
             { label: "Skills Progress", desc: "Skill acquisition data, mastery rates, trend analysis", href: "/dashboard/reports/skills", icon: "🎯", highlight: false },
             { label: "Form Analytics", desc: "Completion rates and average scores by program", href: "/dashboard/reports/forms", icon: "📋", highlight: false },
+            { label: "Sliding Fee Adjustments", desc: "SFS discount impact, FPL distribution, tier breakdown", href: "/dashboard/reports/sliding-fee", icon: "💸", highlight: false },
           ].map(r => (
             <Link key={r.label} href={r.href}
               className={`bg-white rounded-2xl border p-4 hover:shadow-sm transition-shadow no-underline ${
