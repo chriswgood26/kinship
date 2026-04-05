@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import Link from "next/link";
+import DashboardGreeting from "./DashboardGreeting";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Good {new Date().getHours() < 12 ? "morning" : "afternoon"}, {firstName}!</h1>
+        <DashboardGreeting firstName={firstName} />
         <p className="text-slate-500 text-sm mt-0.5">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
       </div>
 
