@@ -41,12 +41,13 @@ function NewAppointmentForm() {
   const [isProviderOnly, setIsProviderOnly] = useState(false);
 
   const timeParam = params.get("time") || "09:00";
+  const requestId = params.get("request_id") || "";
   const [form, setForm] = useState({
     client_id: params.get("client_id") || "", client_name: "",
     provider_id: "",
     appointment_date: params.get("date") || new Date().toISOString().split("T")[0],
     start_time: timeParam, duration_minutes: 60,
-    appointment_type: "Individual Therapy", status: "scheduled", notes: "",
+    appointment_type: "Individual Therapy", status: "confirmed", notes: "",
     is_telehealth: false, telehealth_platform: "jitsi" as "zoom" | "webex" | "jitsi",
     recurrence_rule: "", recurrence_end_date: "",
   });
@@ -129,6 +130,23 @@ function NewAppointmentForm() {
       } catch {}
     }
 
+    // If coming from an appointment request, mark it as confirmed
+    if (requestId && data.appointment?.id) {
+      try {
+        await fetch(`/api/appointment-requests/${requestId}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+          body: JSON.stringify({
+            action: "confirm",
+            appointment_date: form.appointment_date,
+            start_time: form.start_time + ":00",
+            end_time,
+            provider_id: form.provider_id || null,
+            notes: form.notes || null,
+          }),
+        });
+      } catch {}
+    }
+
     router.push(`/dashboard/scheduling?date=${form.appointment_date}`);
   }
 
@@ -138,9 +156,19 @@ function NewAppointmentForm() {
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/dashboard/scheduling" className="text-slate-400 hover:text-slate-700">←</Link>
+        <Link href={requestId ? `/dashboard/scheduling?requests=1` : "/dashboard/scheduling"} className="text-slate-400 hover:text-slate-700">←</Link>
         <h1 className="text-2xl font-bold text-slate-900">New Appointment</h1>
       </div>
+
+      {requestId && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 flex items-center gap-3">
+          <span className="text-lg">📋</span>
+          <div>
+            <p className="font-semibold text-amber-800 text-sm">Confirming appointment request</p>
+            <p className="text-amber-700 text-xs mt-0.5">Adjust the details below and save to confirm. The patient will be notified by email.</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
 

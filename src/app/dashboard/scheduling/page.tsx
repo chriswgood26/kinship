@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { hasFeature } from "@/lib/plans";
+import AppointmentRequestDenyButton from "./AppointmentRequestDenyButton";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default async function SchedulingPage({
   searchParams,
-}: { searchParams: Promise<{ date?: string; provider?: string }> }) {
+}: { searchParams: Promise<{ date?: string; provider?: string; requests?: string }> }) {
   const user = await currentUser();
   if (!user) redirect("/sign-in");
 
@@ -28,6 +29,7 @@ export default async function SchedulingPage({
   const today = new Date().toISOString().split("T")[0];
   const selectedDate = params.date || today;
   const filterProvider = params.provider || "";
+  const showRequests = params.requests === "1";
 
   const selDate = new Date(selectedDate + "T12:00:00");
   const dayOfWeek = selDate.getDay();
@@ -59,6 +61,16 @@ export default async function SchedulingPage({
 
   const { data: org } = await supabaseAdmin.from("organizations").select("plan, addons").eq("id", orgId || "").single();
 
+  // Pending appointment requests from portal
+  const { data: pendingRequests } = await supabaseAdmin
+    .from("appointment_requests")
+    .select("*, client:client_id(first_name, last_name, preferred_name, mrn)")
+    .eq("organization_id", orgId || "")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  const pendingCount = pendingRequests?.length || 0;
+
   const formatDate = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   // Quick stats
@@ -89,6 +101,15 @@ export default async function SchedulingPage({
             className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
             👥 Multi-Provider
           </Link>
+          <Link href={`/dashboard/scheduling?date=${selectedDate}&requests=1`}
+            className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-sm font-medium transition-colors relative ${showRequests ? "bg-amber-500 text-white border-amber-500" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+            📋 Requests
+            {pendingCount > 0 && (
+              <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${showRequests ? "bg-white text-amber-600" : "bg-red-500 text-white"}`}>
+                {pendingCount}
+              </span>
+            )}
+          </Link>
           <Link href={`/dashboard/scheduling/new?date=${selectedDate}`}
             className="bg-teal-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-teal-400 transition-colors text-sm">
             + New Appointment
@@ -110,6 +131,69 @@ export default async function SchedulingPage({
               <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Appointment Requests panel */}
+      {showRequests && (
+        <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
+          <div className="px-5 py-3.5 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+            <h2 className="font-semibold text-amber-900 text-sm">
+              📋 Appointment Requests {pendingCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendingCount} pending</span>}
+            </h2>
+            <Link href={`/dashboard/scheduling?date=${selectedDate}`} className="text-xs text-slate-400 hover:text-slate-600">✕ Close</Link>
+          </div>
+          {!pendingRequests?.length ? (
+            <div className="p-8 text-center text-slate-400 text-sm">
+              <div className="text-3xl mb-2">✅</div>
+              <p>No pending appointment requests</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {pendingRequests.map(req => {
+                const client = Array.isArray(req.client) ? req.client[0] : req.client;
+                return (
+                  <div key={req.id} className="px-5 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Link href={`/dashboard/clients/${req.client_id}`} className="font-semibold text-slate-900 text-sm hover:text-teal-600 no-underline">
+                            {client ? `${client.last_name}, ${client.first_name}` : "Unknown client"}
+                          </Link>
+                          {client?.mrn && <span className="text-xs text-slate-400">MRN: {client.mrn}</span>}
+                        </div>
+                        <div className="text-sm text-slate-600 flex flex-wrap gap-3">
+                          <span className="font-medium">{req.appointment_type || "Appointment"}</span>
+                          {req.requested_date && (
+                            <span className="text-slate-500">
+                              📅 {new Date(req.requested_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                              {req.requested_time && ` · ${new Date(`2000-01-01T${req.requested_time}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`}
+                            </span>
+                          )}
+                          {!req.requested_date && <span className="text-slate-400 italic">Flexible date</span>}
+                        </div>
+                        {req.notes && (
+                          <div className="text-xs text-slate-400 mt-1 bg-slate-50 rounded-lg px-3 py-1.5">{req.notes}</div>
+                        )}
+                        <div className="text-xs text-slate-400 mt-1">
+                          Requested {new Date(req.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Link
+                          href={`/dashboard/scheduling/new?client_id=${req.client_id}&date=${req.requested_date || today}&time=${req.requested_time ? req.requested_time.slice(0, 5) : "09:00"}&request_id=${req.id}`}
+                          className="text-xs bg-teal-500 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-teal-400 transition-colors"
+                        >
+                          ✓ Confirm
+                        </Link>
+                        <AppointmentRequestDenyButton requestId={req.id} selectedDate={selectedDate} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

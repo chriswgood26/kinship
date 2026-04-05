@@ -932,6 +932,37 @@ alter table comm_rules enable row level security;
 alter table comm_opt_outs enable row level security;
 alter table comm_delivery_log enable row level security;
 
+-- Appointment Requests (patient-initiated via portal)
+create table if not exists appointment_requests (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete cascade not null,
+  portal_user_id uuid references portal_users(id) on delete set null,
+  requested_date date,
+  requested_time text,
+  appointment_type text,
+  notes text,
+  status text default 'pending' check (status in ('pending', 'confirmed', 'denied')),
+  reviewed_by text,             -- clerk_user_id of staff who acted
+  reviewed_at timestamptz,
+  appointment_id uuid references appointments(id) on delete set null, -- linked appt once confirmed
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_appt_requests_org on appointment_requests(organization_id);
+create index if not exists idx_appt_requests_client on appointment_requests(client_id);
+create index if not exists idx_appt_requests_status on appointment_requests(status);
+
+alter table appointment_requests enable row level security;
+
+create policy "org_appt_requests_select" on appointment_requests
+  for select using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_appt_requests_insert" on appointment_requests
+  for insert with check (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+create policy "org_appt_requests_update" on appointment_requests
+  for update using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+
 -- Migration: provider flag on user_profiles
 alter table user_profiles add column if not exists is_provider boolean default false;
 
