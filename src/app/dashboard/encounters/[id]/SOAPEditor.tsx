@@ -75,6 +75,7 @@ export default function SOAPEditor({ encounterId, existingNote, clientName, enco
   const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [signing, setSigning] = useState(false);
+  const [missingAssessments, setMissingAssessments] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState("subjective");
   const [restoredFromDraft, setRestoredFromDraft] = useState(false);
   const lateNote = isLateNote(encounterDate);
@@ -202,6 +203,12 @@ export default function SOAPEditor({ encounterId, existingNote, clientName, enco
           setLastSavedAt(new Date());
           setAutoSaveStatus("saved");
         }
+      } else if (res.status === 422) {
+        const data = await res.json();
+        if (data.error === "required_assessments_incomplete" && data.missing_assessments?.length) {
+          setMissingAssessments(data.missing_assessments);
+        }
+        setAutoSaveStatus("error");
       } else {
         setAutoSaveStatus("error");
       }
@@ -234,6 +241,38 @@ export default function SOAPEditor({ encounterId, existingNote, clientName, enco
             <span className="font-semibold">📋 Draft restored</span> — your unsaved changes from a previous session have been recovered.
           </div>
           <button onClick={dismissDraftNotice} className="text-amber-500 hover:text-amber-700 text-sm ml-4">✕</button>
+        </div>
+      )}
+
+      {/* Required assessments blocker */}
+      {missingAssessments.length > 0 && (
+        <div className="border border-red-300 bg-red-50 rounded-xl px-4 py-4">
+          <div className="flex items-start gap-3">
+            <span className="text-red-500 text-lg mt-0.5">🚫</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-800 mb-1">
+                Cannot Sign — Required Assessments Incomplete
+              </p>
+              <p className="text-xs text-red-700 mb-3">
+                This client&apos;s program requires the following assessments to be completed before the note can be signed.
+                Please complete them and return to sign.
+              </p>
+              <ul className="space-y-1">
+                {missingAssessments.map(a => (
+                  <li key={a} className="flex items-center gap-2 text-xs font-medium text-red-800">
+                    <span className="w-2 h-2 rounded-full bg-red-400 inline-block flex-shrink-0" />
+                    {a}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => setMissingAssessments([])}
+                className="mt-3 text-xs text-red-500 hover:text-red-700 underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
