@@ -10,6 +10,10 @@ interface Program {
   location_id: string | null;
   location: Location | null;
   enabled_note_types: string[] | null;
+  // Billing rules
+  allowed_cpt_codes: string[] | null;
+  sfs_eligible: boolean;
+  required_auth_types: string[];
 }
 interface Enrollment { id: string; patient: { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null }; status: string; admission_date: string; discharge_date: string | null; assigned_worker: string | null; }
 interface AssessmentRequirement {
@@ -26,6 +30,88 @@ const NOTE_TYPES = [
   { key: "dd_notes", label: "DD Notes", description: "Developmental disability service documentation", icon: "🧩" },
   { key: "group", label: "Group Notes", description: "Group therapy and group service notes", icon: "👥" },
   { key: "case_mgmt", label: "Case Management Notes", description: "Case coordination, referrals, and service linkage notes", icon: "📋" },
+];
+
+// CPT code catalog grouped by category (for billing rules UI)
+const CPT_CODE_CATALOG = [
+  {
+    category: "Individual Therapy",
+    codes: [
+      { code: "90832", label: "90832 — Psychotherapy, 30 min" },
+      { code: "90834", label: "90834 — Psychotherapy, 45 min" },
+      { code: "90837", label: "90837 — Psychotherapy, 60 min" },
+      { code: "90838", label: "90838 — Psychotherapy add-on, 30 min" },
+    ],
+  },
+  {
+    category: "Group & Crisis",
+    codes: [
+      { code: "90853", label: "90853 — Group psychotherapy" },
+      { code: "90849", label: "90849 — Multiple-family group therapy" },
+      { code: "90839", label: "90839 — Crisis psychotherapy, first 60 min" },
+      { code: "90840", label: "90840 — Crisis psychotherapy add-on, 30 min" },
+    ],
+  },
+  {
+    category: "Assessment & Evaluation",
+    codes: [
+      { code: "90791", label: "90791 — Psychiatric diagnostic evaluation" },
+      { code: "90792", label: "90792 — Psychiatric diagnostic eval w/medical services" },
+      { code: "H0031", label: "H0031 — Mental health assessment" },
+    ],
+  },
+  {
+    category: "Collaborative Care",
+    codes: [
+      { code: "99492", label: "99492 — Collaborative care, initial 70 min" },
+      { code: "99493", label: "99493 — Collaborative care, subsequent 60 min" },
+      { code: "99494", label: "99494 — Collaborative care add-on, 30 min" },
+    ],
+  },
+  {
+    category: "Office Visits",
+    codes: [
+      { code: "99213", label: "99213 — Office visit, established, moderate" },
+      { code: "99214", label: "99214 — Office visit, established, high" },
+    ],
+  },
+  {
+    category: "Psychosocial & Rehab",
+    codes: [
+      { code: "H2017", label: "H2017 — Psychosocial rehabilitation, per 15 min" },
+      { code: "H0004", label: "H0004 — Behavioral health counseling" },
+      { code: "H0020", label: "H0020 — Substance use treatment" },
+    ],
+  },
+  {
+    category: "Case Management",
+    codes: [
+      { code: "T1016", label: "T1016 — Case management, per 15 min" },
+      { code: "H2015", label: "H2015 — Comprehensive community support, per 15 min" },
+      { code: "90846", label: "90846 — Family psychotherapy w/o patient" },
+      { code: "90847", label: "90847 — Family psychotherapy w/ patient" },
+    ],
+  },
+  {
+    category: "HCBS / DD Waiver",
+    codes: [
+      { code: "T1019", label: "T1019 — Personal care services, per 15 min" },
+      { code: "T2019", label: "T2019 — Day habilitation, per 15 min" },
+      { code: "T2021", label: "T2021 — Residential habilitation, per 15 min" },
+      { code: "T2025", label: "T2025 — Supported employment, per 15 min" },
+      { code: "H2014", label: "H2014 — Skills training and development, per 15 min" },
+      { code: "H2019", label: "H2019 — Therapeutic behavioral services, per 15 min" },
+    ],
+  },
+];
+
+const ALL_CPT_CODES = CPT_CODE_CATALOG.flatMap(g => g.codes.map(c => c.code));
+
+const AUTH_TYPES = [
+  { key: "prior_auth", label: "Prior Authorization (PA)", description: "Payer must pre-approve services before billing" },
+  { key: "service_auth", label: "Service Authorization (SA)", description: "State/waiver program service authorization required" },
+  { key: "loc_auth", label: "Level of Care Authorization (LOC)", description: "Level of care determination required (e.g., residential, PHP)" },
+  { key: "csr", label: "Continued Stay Review (CSR)", description: "Ongoing medical necessity review for extended stays" },
 ];
 
 const ALL_NOTE_TYPE_KEYS = NOTE_TYPES.map(n => n.key);
@@ -76,8 +162,9 @@ export default function ProgramsPage() {
   const [showNew, setShowNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [locationFilter, setLocationFilter] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"census" | "assessments" | "note_types">("census");
+  const [activeTab, setActiveTab] = useState<"census" | "assessments" | "note_types" | "billing_rules">("census");
   const [savingNoteTypes, setSavingNoteTypes] = useState(false);
+  const [savingBilling, setSavingBilling] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", program_type: "outpatient", description: "", capacity: "", location_id: "" });
 
   // Assessment requirement form state
@@ -201,6 +288,59 @@ export default function ProgramsPage() {
       setPrograms(ps => ps.map(p => p.id === selected.id ? { ...p, enabled_note_types: updated } : p));
     }
     setSavingNoteTypes(false);
+  }
+
+  async function toggleCptCode(code: string, enabled: boolean) {
+    if (!selected) return;
+    setSavingBilling(true);
+    // null = all allowed; convert to explicit list when first restriction is made
+    const current = selected.allowed_cpt_codes ?? ALL_CPT_CODES;
+    const updated = enabled
+      ? [...current.filter(c => c !== code), code]
+      : current.filter(c => c !== code);
+    // If all codes enabled, store null (unrestricted)
+    const payload = updated.length === ALL_CPT_CODES.length ? null : updated;
+    const res = await fetch("/api/programs", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ id: selected.id, allowed_cpt_codes: payload }),
+    });
+    if (res.ok) {
+      setSelected(s => s ? { ...s, allowed_cpt_codes: payload } : s);
+      setPrograms(ps => ps.map(p => p.id === selected.id ? { ...p, allowed_cpt_codes: payload } : p));
+    }
+    setSavingBilling(false);
+  }
+
+  async function setSfsEligible(eligible: boolean) {
+    if (!selected) return;
+    setSavingBilling(true);
+    const res = await fetch("/api/programs", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ id: selected.id, sfs_eligible: eligible }),
+    });
+    if (res.ok) {
+      setSelected(s => s ? { ...s, sfs_eligible: eligible } : s);
+      setPrograms(ps => ps.map(p => p.id === selected.id ? { ...p, sfs_eligible: eligible } : p));
+    }
+    setSavingBilling(false);
+  }
+
+  async function toggleAuthType(authKey: string, enabled: boolean) {
+    if (!selected) return;
+    setSavingBilling(true);
+    const current = selected.required_auth_types ?? [];
+    const updated = enabled
+      ? [...current.filter(k => k !== authKey), authKey]
+      : current.filter(k => k !== authKey);
+    const res = await fetch("/api/programs", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ id: selected.id, required_auth_types: updated }),
+    });
+    if (res.ok) {
+      setSelected(s => s ? { ...s, required_auth_types: updated } : s);
+      setPrograms(ps => ps.map(p => p.id === selected.id ? { ...p, required_auth_types: updated } : p));
+    }
+    setSavingBilling(false);
   }
 
   const activeEnrollments = enrollments.filter(e => e.status === "active");
@@ -361,13 +501,18 @@ export default function ProgramsPage() {
                 <button
                   onClick={() => setActiveTab("assessments")}
                   className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === "assessments" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                  Assessment Requirements
+                  Assessments
                   {requirements.length > 0 && <span className="ml-1.5 bg-teal-100 text-teal-700 text-xs px-1.5 py-0.5 rounded-full">{requirements.length}</span>}
                 </button>
                 <button
                   onClick={() => setActiveTab("note_types")}
                   className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === "note_types" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                   Note Types
+                </button>
+                <button
+                  onClick={() => setActiveTab("billing_rules")}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === "billing_rules" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  Billing Rules
                 </button>
               </div>
 
@@ -617,6 +762,183 @@ export default function ProgramsPage() {
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Billing Rules tab */}
+              {activeTab === "billing_rules" && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                    <span className="font-semibold">Billing rules</span> restrict which CPT codes may be billed under <strong>{selected.name}</strong>, control sliding fee scale (SFS) eligibility, and define authorization requirements enforced at claim validation.
+                  </div>
+
+                  {/* SFS Eligibility */}
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Sliding Fee Scale (SFS) Eligibility</h3>
+                    </div>
+                    <div className="px-5 py-4 flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">SFS Discounts Eligible</div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          {selected.sfs_eligible !== false
+                            ? "Sliding fee scale discounts apply to services billed under this program based on client income tier."
+                            : "SFS discounts are disabled — full charges apply regardless of client income tier."}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSfsEligible(!(selected.sfs_eligible !== false))}
+                        disabled={savingBilling}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${selected.sfs_eligible !== false ? "bg-teal-500" : "bg-slate-200"}`}
+                        role="switch"
+                        aria-checked={selected.sfs_eligible !== false}
+                        title={selected.sfs_eligible !== false ? "Disable SFS" : "Enable SFS"}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${selected.sfs_eligible !== false ? "translate-x-5" : "translate-x-0"}`} />
+                      </button>
+                    </div>
+                    {selected.sfs_eligible === false && (
+                      <div className="px-5 py-3 border-t border-amber-100 bg-amber-50">
+                        <p className="text-xs text-amber-700 font-medium">⚠ SFS is disabled — this program bills at full charge rates. Common for grant-funded programs with separate cost structures.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Required Auth Types */}
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Required Authorization Types</h3>
+                      {(selected.required_auth_types ?? []).length > 0 && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                          {(selected.required_auth_types ?? []).length} required
+                        </span>
+                      )}
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {AUTH_TYPES.map(authType => {
+                        const isRequired = (selected.required_auth_types ?? []).includes(authType.key);
+                        return (
+                          <div key={authType.key} className="px-5 py-4 flex items-center justify-between hover:bg-slate-50">
+                            <div>
+                              <div className="font-semibold text-slate-900 text-sm">{authType.label}</div>
+                              <div className="text-xs text-slate-400 mt-0.5">{authType.description}</div>
+                            </div>
+                            <button
+                              onClick={() => toggleAuthType(authType.key, !isRequired)}
+                              disabled={savingBilling}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${isRequired ? "bg-amber-500" : "bg-slate-200"}`}
+                              role="switch"
+                              aria-checked={isRequired}
+                              title={isRequired ? `Remove ${authType.label} requirement` : `Require ${authType.label}`}
+                            >
+                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isRequired ? "translate-x-5" : "translate-x-0"}`} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
+                      <p className="text-xs text-slate-400">
+                        {(selected.required_auth_types ?? []).length === 0
+                          ? "No authorization requirements configured — billing rule BL013 will not block claims for this program."
+                          : `Charges billed under this program must include an authorization number. Claim validation will error if no auth number is present.`}
+                        {savingBilling && <span className="ml-2 text-teal-600">Saving...</span>}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Allowed CPT Codes */}
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Allowed CPT Codes</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {selected.allowed_cpt_codes === null
+                            ? "All CPT codes allowed (unrestricted)"
+                            : `Restricted to ${selected.allowed_cpt_codes.length} code${selected.allowed_cpt_codes.length === 1 ? "" : "s"}`}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            setSavingBilling(true);
+                            const res = await fetch("/api/programs", {
+                              method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+                              body: JSON.stringify({ id: selected.id, allowed_cpt_codes: null }),
+                            });
+                            if (res.ok) {
+                              setSelected(s => s ? { ...s, allowed_cpt_codes: null } : s);
+                              setPrograms(ps => ps.map(p => p.id === selected.id ? { ...p, allowed_cpt_codes: null } : p));
+                            }
+                            setSavingBilling(false);
+                          }}
+                          disabled={savingBilling || selected.allowed_cpt_codes === null}
+                          className="text-xs text-teal-600 hover:text-teal-800 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                          Allow All
+                        </button>
+                        <span className="text-slate-200">|</span>
+                        <button
+                          onClick={async () => {
+                            setSavingBilling(true);
+                            const res = await fetch("/api/programs", {
+                              method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+                              body: JSON.stringify({ id: selected.id, allowed_cpt_codes: [] }),
+                            });
+                            if (res.ok) {
+                              setSelected(s => s ? { ...s, allowed_cpt_codes: [] } : s);
+                              setPrograms(ps => ps.map(p => p.id === selected.id ? { ...p, allowed_cpt_codes: [] } : p));
+                            }
+                            setSavingBilling(false);
+                          }}
+                          disabled={savingBilling || (selected.allowed_cpt_codes !== null && selected.allowed_cpt_codes.length === 0)}
+                          className="text-xs text-slate-500 hover:text-slate-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                          Restrict All
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
+                      {CPT_CODE_CATALOG.map(group => (
+                        <div key={group.category}>
+                          <div className="px-5 py-2 bg-slate-50 border-b border-slate-100">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{group.category}</span>
+                          </div>
+                          {group.codes.map(({ code, label }) => {
+                            const isAllowed = selected.allowed_cpt_codes === null || selected.allowed_cpt_codes.includes(code);
+                            return (
+                              <div key={code} className="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
+                                <div>
+                                  <span className="font-mono text-sm font-semibold text-slate-800">{code}</span>
+                                  <span className="text-sm text-slate-500 ml-2">{label.split(" — ")[1]}</span>
+                                </div>
+                                <button
+                                  onClick={() => toggleCptCode(code, !isAllowed)}
+                                  disabled={savingBilling}
+                                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${isAllowed ? "bg-teal-500" : "bg-slate-200"}`}
+                                  role="switch"
+                                  aria-checked={isAllowed}
+                                  title={isAllowed ? `Disallow ${code}` : `Allow ${code}`}
+                                >
+                                  <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isAllowed ? "translate-x-4" : "translate-x-0"}`} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
+                      <p className="text-xs text-slate-400">
+                        {selected.allowed_cpt_codes === null
+                          ? "All CPT codes are allowed — no billing rule BL012 restrictions will be enforced."
+                          : selected.allowed_cpt_codes.length === 0
+                          ? "⚠ No CPT codes are allowed — all charges billed under this program will fail validation."
+                          : `${selected.allowed_cpt_codes.length} of ${ALL_CPT_CODES.length} CPT codes allowed. Claims with other codes will fail BL012 validation.`}
+                        {savingBilling && <span className="ml-2 text-teal-600">Saving...</span>}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

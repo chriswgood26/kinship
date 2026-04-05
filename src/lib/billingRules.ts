@@ -16,6 +16,30 @@ export interface ChargeInput {
   unit_rate?: number;
 }
 
+/**
+ * Program-level billing configuration.
+ * Fetched from the programs table and passed into validateCharge to enforce
+ * program-specific restrictions on top of the standard billing rules.
+ */
+export interface ProgramBillingConfig {
+  program_id: string;
+  program_name: string;
+  /** null = all CPT codes allowed; non-null = only these codes may be billed */
+  allowed_cpt_codes: string[] | null;
+  /** Whether sliding fee scale discounts apply to this program */
+  sfs_eligible: boolean;
+  /** Auth types required before billing (e.g. prior_auth, service_auth, loc_auth, csr) */
+  required_auth_types: string[];
+}
+
+/** Human-readable labels for auth type keys */
+export const AUTH_TYPE_LABELS: Record<string, string> = {
+  prior_auth: "Prior Authorization",
+  service_auth: "Service Authorization",
+  loc_auth: "Level of Care Authorization",
+  csr: "Continued Stay Review",
+};
+
 export interface RuleResult {
   code: string;
   severity: "error" | "warning" | "info";
@@ -72,7 +96,7 @@ const VALID_CPT_UNITS: Record<string, { max: number; label: string }> = {
   "99214": { max: 1, label: "Office visit (1 unit)" },
 };
 
-export function validateCharge(charge: ChargeInput): ValidationResult {
+export function validateCharge(charge: ChargeInput, program?: ProgramBillingConfig): ValidationResult {
   const errors: RuleResult[] = [];
   const warnings: RuleResult[] = [];
   const infos: RuleResult[] = [];
@@ -203,6 +227,45 @@ export function validateCharge(charge: ChargeInput): ValidationResult {
         severity: "warning",
         field: "charge_amount",
         message: `Charge amount ($${actual.toFixed(2)}) does not match unit rate × units ($${charge.unit_rate.toFixed(2)} × ${charge.units} = $${expected.toFixed(2)}). Verify before submitting.`,
+      });
+    }
+  }
+
+  // ── Program-level rules (BL012–BL014) ─────────────────────────────────────
+  if (program) {
+    // Rule 12: CPT code not in program's allowed list
+    if (
+      program.allowed_cpt_codes !== null &&
+      program.allowed_cpt_codes.length > 0 &&
+      !program.allowed_cpt_codes.includes(charge.cpt_code)
+    ) {
+      errors.push({
+        code: "BL012",
+        severity: "error",
+        field: "cpt_code",
+        message: `CPT ${charge.cpt_code} is not authorized for program "${program.program_name}". Allowed codes: ${program.allowed_cpt_codes.join(", ")}.`,
+      });
+    }
+
+    // Rule 13: Program requires authorizations that are not on the charge
+    if (program.required_auth_types.length > 0 && !charge.auth_number) {
+      const authLabels = program.required_auth_types
+        .map(t => AUTH_TYPE_LABELS[t] || t)
+        .join(", ");
+      errors.push({
+        code: "BL013",
+        severity: "error",
+        field: "auth_number",
+        message: `Program "${program.program_name}" requires ${authLabels} before services can be billed. Add an authorization number.`,
+      });
+    }
+
+    // Rule 14: SFS not eligible — informational notice
+    if (!program.sfs_eligible) {
+      infos.push({
+        code: "BL014",
+        severity: "info",
+        message: `Program "${program.program_name}" is not eligible for sliding fee scale discounts. Full charges apply regardless of income tier.`,
       });
     }
   }
