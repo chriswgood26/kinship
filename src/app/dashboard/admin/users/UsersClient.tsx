@@ -16,6 +16,11 @@ interface UserProfile {
   credentials: string | null;
   npi: string | null;
   is_active: boolean;
+  license_number: string | null;
+  license_type: string | null;
+  license_state: string | null;
+  license_expiry_date: string | null;
+  license_notes: string | null;
 }
 
 export default function UsersClient({ users: initial, currentUserId, isAdmin = false }: {
@@ -130,6 +135,18 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
   const inputClass = "w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500";
   const labelClass = "text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1";
 
+  function getLicenseExpiryBadge(expiryDate: string | null) {
+    if (!expiryDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    const days = Math.floor((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">License Expired</span>;
+    if (days <= 30) return <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">License ≤30d</span>;
+    if (days <= 90) return <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">License ≤90d</span>;
+    return null;
+  }
+
   const activeCount = users.filter(u => u.is_active).length;
 
   return (
@@ -207,10 +224,10 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
                           {u.first_name?.[0]}{u.last_name?.[0]}
                         </div>
                         <div>
-                          <div className="font-semibold text-slate-900 text-sm">
-                            {u.first_name} {u.last_name}
-                            {u.credentials && <span className="text-slate-400 font-normal">, {u.credentials}</span>}
-                            {u.clerk_user_id === currentUserId && <span className="ml-2 text-xs bg-teal-100 text-teal-600 px-1.5 py-0.5 rounded font-medium">You</span>}
+                          <div className="font-semibold text-slate-900 text-sm flex items-center flex-wrap gap-1">
+                            <span>{u.first_name} {u.last_name}{u.credentials && <span className="text-slate-400 font-normal">, {u.credentials}</span>}</span>
+                            {u.clerk_user_id === currentUserId && <span className="text-xs bg-teal-100 text-teal-600 px-1.5 py-0.5 rounded font-medium">You</span>}
+                            {getLicenseExpiryBadge(u.license_expiry_date)}
                           </div>
                           <div className="text-xs text-slate-400">{u.email || "No email"}</div>
                         </div>
@@ -287,6 +304,38 @@ export default function UsersClient({ users: initial, currentUserId, isAdmin = f
                           <div><label className={labelClass}>Title</label><input value={editForm.title || ""} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="LCSW, LPC, MD..." /></div>
                           <div><label className={labelClass}>Credentials</label><input value={editForm.credentials || ""} onChange={e => setEditForm(f => ({ ...f, credentials: e.target.value }))} className={inputClass} placeholder="LCSW, PhD..." /></div>
                           <div><label className={labelClass}>NPI</label><input value={editForm.npi || ""} onChange={e => setEditForm(f => ({ ...f, npi: e.target.value }))} className={inputClass} placeholder="10-digit NPI" /></div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-slate-200">
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">License Information</div>
+                          <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className={labelClass}>License Type</label>
+                            <select value={editForm.license_type || ""} onChange={e => setEditForm(f => ({ ...f, license_type: e.target.value }))} className={inputClass}>
+                              <option value="">Select type...</option>
+                              <option>LCSW</option>
+                              <option>LPC</option>
+                              <option>LMFT</option>
+                              <option>LMSW</option>
+                              <option>LPCC</option>
+                              <option>MD</option>
+                              <option>DO</option>
+                              <option>APRN</option>
+                              <option>NP</option>
+                              <option>PA</option>
+                              <option>PhD</option>
+                              <option>PsyD</option>
+                              <option>RN</option>
+                              <option>LPN</option>
+                              <option>CADC</option>
+                              <option>LADC</option>
+                              <option>Other</option>
+                            </select>
+                          </div>
+                          <div><label className={labelClass}>License Number</label><input value={editForm.license_number || ""} onChange={e => setEditForm(f => ({ ...f, license_number: e.target.value }))} className={inputClass} placeholder="e.g. 12345" /></div>
+                          <div><label className={labelClass}>License State</label><input value={editForm.license_state || ""} onChange={e => setEditForm(f => ({ ...f, license_state: e.target.value.toUpperCase() }))} className={inputClass} placeholder="e.g. OR" maxLength={2} /></div>
+                          <div><label className={labelClass}>Expiry Date</label><input type="date" value={editForm.license_expiry_date || ""} onChange={e => setEditForm(f => ({ ...f, license_expiry_date: e.target.value }))} className={inputClass} /></div>
+                          <div className="col-span-2"><label className={labelClass}>License Notes</label><input value={editForm.license_notes || ""} onChange={e => setEditForm(f => ({ ...f, license_notes: e.target.value }))} className={inputClass} placeholder="Renewal status, supervision hours, etc." /></div>
+                        </div>
                         </div>
                         <div className="text-xs text-slate-500 bg-white rounded-lg px-3 py-2 border border-slate-200 mb-3">
                           <strong className="text-slate-700">Permissions:</strong>{" "}

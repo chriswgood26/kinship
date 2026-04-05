@@ -20,15 +20,24 @@ export default async function DashboardPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  const in90Days = new Date();
+  in90Days.setDate(in90Days.getDate() + 90);
+  const in90DaysStr = in90Days.toISOString().split("T")[0];
+
   const [
     { count: totalClients },
     { count: todayAppts },
     { count: pendingNotes },
+    { data: expiringLicenses },
   ] = await Promise.all([
     supabaseAdmin.from("clients").select("*", { count: "exact", head: true }).eq("organization_id", orgId || "").eq("is_active", true),
     supabaseAdmin.from("appointments").select("*", { count: "exact", head: true }).eq("organization_id", orgId || "").eq("appointment_date", today),
     supabaseAdmin.from("encounters").select("*", { count: "exact", head: true }).eq("organization_id", orgId || "").eq("status", "in_progress"),
+    supabaseAdmin.from("user_profiles").select("first_name, last_name, license_expiry_date, license_type").eq("organization_id", orgId || "").eq("is_active", true).not("license_expiry_date", "is", null).lte("license_expiry_date", in90DaysStr),
   ]);
+
+  const expiredLicenses = (expiringLicenses || []).filter(u => u.license_expiry_date < today);
+  const soonLicenses = (expiringLicenses || []).filter(u => u.license_expiry_date >= today);
 
   const firstName = user.firstName || "there";
 
@@ -39,6 +48,40 @@ export default async function DashboardPage() {
         <DashboardGreeting firstName={firstName} />
         <p className="text-slate-500 text-sm mt-0.5">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
       </div>
+
+      {/* License expiry alerts */}
+      {expiredLicenses.length > 0 && (
+        <Link href="/dashboard/admin/licenses" className="block bg-red-50 border border-red-200 rounded-2xl px-5 py-4 hover:bg-red-100 transition-colors">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">🚨</span>
+            <div className="flex-1">
+              <div className="font-semibold text-red-800 text-sm">
+                {expiredLicenses.length} clinician license{expiredLicenses.length !== 1 ? "s" : ""} expired
+              </div>
+              <div className="text-red-600 text-xs mt-0.5">
+                {expiredLicenses.map(u => `${u.first_name} ${u.last_name}`).join(", ")} — immediate renewal required
+              </div>
+            </div>
+            <span className="text-red-400 text-sm">View →</span>
+          </div>
+        </Link>
+      )}
+      {soonLicenses.length > 0 && (
+        <Link href="/dashboard/admin/licenses" className="block bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 hover:bg-amber-100 transition-colors">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">⚠️</span>
+            <div className="flex-1">
+              <div className="font-semibold text-amber-800 text-sm">
+                {soonLicenses.length} clinician license{soonLicenses.length !== 1 ? "s" : ""} expiring within 90 days
+              </div>
+              <div className="text-amber-600 text-xs mt-0.5">
+                {soonLicenses.map(u => `${u.first_name} ${u.last_name}`).join(", ")} — plan for renewal
+              </div>
+            </div>
+            <span className="text-amber-400 text-sm">View →</span>
+          </div>
+        </Link>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
