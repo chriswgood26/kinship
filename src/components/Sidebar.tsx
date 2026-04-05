@@ -28,6 +28,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/dashboard/referrals", label: "Referrals", icon: "🔄" },
       { href: "/dashboard/clients", label: "Clients", icon: "👤" },
+      { href: "/dashboard/caseload", label: "Caseload Management", icon: "⚖️" },
       { href: "/dashboard/scheduling", label: "Scheduling", icon: "📅" },
       { href: "/dashboard/telehealth", label: "Telehealth", icon: "🎥" },
       { href: "/dashboard/inbox", label: "Messages", icon: "💬", inboxBadge: true },

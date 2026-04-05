@@ -1336,3 +1336,12 @@ create policy "org_housing_update" on client_housing_assessments
   for update using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
 create policy "org_housing_delete" on client_housing_assessments
   for delete using (organization_id = (select organization_id from user_profiles where clerk_user_id = (current_setting('request.jwt.claims', true)::jsonb->>'sub') limit 1));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Caseload / Panel Management
+-- Primary clinician assignment on clients table
+-- ─────────────────────────────────────────────────────────────────────────────
+alter table clients add column if not exists primary_clinician_id uuid references user_profiles(id) on delete set null;
+alter table clients add column if not exists primary_clinician_name text;
+
+create index if not exists idx_clients_primary_clinician on clients(primary_clinician_id) where primary_clinician_id is not null;

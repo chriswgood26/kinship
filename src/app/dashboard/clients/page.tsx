@@ -8,26 +8,32 @@ export const dynamic = "force-dynamic";
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; caseload?: string }>;
 }) {
   const user = await currentUser();
   if (!user) redirect("/sign-in");
 
-  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id").eq("clerk_user_id", user.id).single();
+  const { data: profile } = await supabaseAdmin.from("user_profiles").select("organization_id, id").eq("clerk_user_id", user.id).single();
   const orgId = profile?.organization_id;
 
   const params = await searchParams;
   const q = params.q || "";
   const status = params.status || "active";
+  const caseloadFilter = params.caseload || "";
 
   let query = supabaseAdmin
     .from("clients")
-    .select("id, mrn, first_name, last_name, preferred_name, pronouns, date_of_birth, phone_primary, email, status, insurance_provider, primary_clinician_name", { count: "exact" })
+    .select("id, mrn, first_name, last_name, preferred_name, pronouns, date_of_birth, phone_primary, email, status, insurance_provider, primary_clinician_name, primary_clinician_id", { count: "exact" })
     .eq("organization_id", orgId || "")
     .order("last_name");
 
   if (q) query = query.or(`last_name.ilike.%${q}%,first_name.ilike.%${q}%,mrn.ilike.%${q}%,preferred_name.ilike.%${q}%`);
   if (status !== "all") query = query.eq("status", status);
+
+  // Filter by current user's caseload
+  if (caseloadFilter === "mine" && profile?.id) {
+    query = query.eq("primary_clinician_id", profile.id);
+  }
 
   const { data: clients, count } = await query.limit(50);
 
@@ -48,7 +54,9 @@ export default async function ClientsPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{count ?? 0} total</p>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {count ?? 0} {caseloadFilter === "mine" ? "in my caseload" : "total"}
+          </p>
         </div>
         <div className="flex gap-2">
           <Link href="/dashboard/clients/merge" className="border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-medium hover:bg-slate-50 transition-colors text-sm">
@@ -58,6 +66,23 @@ export default async function ClientsPage({
             + New Client
           </Link>
         </div>
+      </div>
+
+      {/* Caseload toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-slate-500 font-medium">View:</span>
+        <Link href={`/dashboard/clients?status=${status}${q ? `&q=${q}` : ""}`}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!caseloadFilter ? "bg-teal-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+          All Clients
+        </Link>
+        <Link href={`/dashboard/clients?status=${status}${q ? `&q=${q}` : ""}&caseload=mine`}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${caseloadFilter === "mine" ? "bg-teal-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+          👤 My Caseload
+        </Link>
+        <Link href="/dashboard/caseload"
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors ml-1">
+          ⚖️ Manage Panels
+        </Link>
       </div>
 
       {/* Search + filter */}
@@ -71,8 +96,9 @@ export default async function ClientsPage({
           <option value="discharged">Discharged</option>
           <option value="waitlist">Waitlist</option>
         </select>
+        {caseloadFilter && <input type="hidden" name="caseload" value={caseloadFilter} />}
         <button type="submit" className="bg-teal-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400">Search</button>
-        {q && <Link href="/dashboard/clients" className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Clear</Link>}
+        {(q || caseloadFilter) && <Link href="/dashboard/clients" className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Clear</Link>}
       </form>
 
       {/* Client table */}
@@ -80,8 +106,13 @@ export default async function ClientsPage({
         {!clients?.length ? (
           <div className="p-12 text-center">
             <div className="text-4xl mb-3">👤</div>
-            <p className="font-semibold text-slate-900 mb-1">{q ? `No clients matching "${q}"` : "No clients yet"}</p>
-            {!q && <Link href="/dashboard/clients/new" className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400 inline-block mt-3">+ Add First Client</Link>}
+            <p className="font-semibold text-slate-900 mb-1">
+              {caseloadFilter === "mine" ? "No clients in your caseload" : q ? `No clients matching "${q}"` : "No clients yet"}
+            </p>
+            {caseloadFilter === "mine" && (
+              <p className="text-sm text-slate-400 mt-1">Set yourself as primary clinician on a client to build your caseload.</p>
+            )}
+            {!q && !caseloadFilter && <Link href="/dashboard/clients/new" className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-teal-400 inline-block mt-3">+ Add First Client</Link>}
           </div>
         ) : (
           <table className="w-full">
@@ -92,6 +123,7 @@ export default async function ClientsPage({
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Age / DOB</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Insurance</th>
+                {!caseloadFilter && <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Clinician</th>}
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3.5"></th>
               </tr>
@@ -125,6 +157,15 @@ export default async function ClientsPage({
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">{client.phone_primary || "—"}</td>
                     <td className="px-4 py-4 text-sm text-slate-500">{client.insurance_provider || "—"}</td>
+                    {!caseloadFilter && (
+                      <td className="px-4 py-4 text-sm text-slate-500">
+                        {client.primary_clinician_name ? (
+                          <span className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">{client.primary_clinician_name}</span>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-4">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${STATUS_COLORS[client.status || "active"] || STATUS_COLORS.active}`}>
                         {client.status || "active"}
