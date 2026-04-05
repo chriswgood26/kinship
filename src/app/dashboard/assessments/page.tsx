@@ -110,6 +110,13 @@ export default async function AssessmentsPage() {
           <div className="text-sm text-slate-500 mt-1">Behavior and Symptom Identification Scale — 24-item self-report outcomes measure covering depression, relationships, self-harm, emotional lability, psychosis, and substance use</div>
           <div className="mt-3 text-xs text-teal-600 font-semibold">Outcomes Measure · McLean Hospital</div>
         </Link>
+        <Link href="/dashboard/assessments/ebp"
+          className="bg-white rounded-2xl border-2 border-indigo-200 hover:border-indigo-400 p-5 text-left transition-all hover:shadow-sm">
+          <div className="text-3xl mb-3">🔬</div>
+          <div className="font-bold text-slate-900">EBP Fidelity Tracking</div>
+          <div className="text-sm text-slate-500 mt-1">Evidence-based practice fidelity monitoring — track implementation quality for CBT, DBT, MI, TF-CBT, and other EBPs with domain ratings, checklists, and trend reporting</div>
+          <div className="mt-3 text-xs text-indigo-600 font-semibold">EBP Implementation · Fidelity Monitoring</div>
+        </Link>
       </div>
 
       {/* Past assessments */}
