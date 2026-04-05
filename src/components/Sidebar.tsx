@@ -8,9 +8,10 @@ import CommunicationBadgeCount from "@/components/CommunicationBadgeCount";
 import ROIBadge from "@/components/ROIBadge";
 import type { Terminology } from "@/lib/terminology";
 import { PLAN_LABELS, type Plan } from "@/lib/plans";
+import { hasPermission } from "@/lib/roles";
 
-interface NavItem { href: string; label: string; icon: string; exact?: boolean; inboxBadge?: boolean; roles?: string[]; }
-interface NavSection { label: string | null; icon?: string; items: NavItem[]; defaultOpen?: boolean; roles?: string[]; }
+interface NavItem { href: string; label: string; icon: string; exact?: boolean; inboxBadge?: boolean; roles?: string[]; permissions?: string[]; }
+interface NavSection { label: string | null; icon?: string; items: NavItem[]; defaultOpen?: boolean; roles?: string[]; permissions?: string[]; }
 
 const navSections: NavSection[] = [
   {
@@ -48,7 +49,7 @@ const navSections: NavSection[] = [
       { href: "/dashboard/isp", label: "Support Plans (ISP)", icon: "🧩" },
       { href: "/dashboard/dd-notes", label: "DD Progress Notes", icon: "📝" },
       { href: "/dashboard/emar", label: "eMAR", icon: "💊" },
-      { href: "/dashboard/supervisor", label: "Supervisor Review", icon: "✅", roles: ["supervisor", "admin"] },
+      { href: "/dashboard/supervisor", label: "Supervisor Review", icon: "✅", permissions: ["supervisor.read"] },
       { href: "/dashboard/incidents", label: "Incident Reports", icon: "🚨" },
     ],
   },
@@ -64,7 +65,6 @@ const navSections: NavSection[] = [
     label: "Billing",
     icon: "💰",
     defaultOpen: true,
-    roles: ["admin", "billing", "supervisor", "clinician", "care_coordinator", "receptionist"],
     items: [
       { href: "/dashboard/billing", label: "Charges & Claims", icon: "💰" },
       { href: "/dashboard/billing/invoices", label: "Client Invoices", icon: "🧾" },
@@ -86,8 +86,8 @@ const navSections: NavSection[] = [
       { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
       { href: "/dashboard/portal", label: "Client Portal", icon: "🌐" },
       { href: "/dashboard/admin/settings", label: "Settings", icon: "⚙️" },
-      { href: "/dashboard/admin/field-config", label: "Field Configuration", icon: "🔧", roles: ["admin"] },
-      { href: "/dashboard/migration", label: "Migration Planner", icon: "🔄", roles: ["admin"] },
+      { href: "/dashboard/admin/field-config", label: "Field Configuration", icon: "🔧", permissions: ["*"] },
+      { href: "/dashboard/migration", label: "Migration Planner", icon: "🔄", permissions: ["*"] },
       { href: "/dashboard/admin/sliding-fee", label: "Sliding Fee", icon: "💲" },
       { href: "/dashboard/admin/clearinghouse", label: "Clearinghouse", icon: "🏥" },
       { href: "/dashboard/admin/communications", label: "Communications", icon: "📣" },
@@ -105,7 +105,7 @@ const PLAN_BADGE_COLORS: Record<Plan, string> = {
   custom:   "bg-amber-50 text-amber-700",
 };
 
-export default function Sidebar({ terminology, userRole = "clinician", plan = "starter" }: { terminology?: Terminology; userRole?: string; plan?: string }) {
+export default function Sidebar({ terminology, userRoles = ["clinician"], plan = "starter" }: { terminology?: Terminology; userRoles?: string[]; plan?: string }) {
   const planKey = (plan || "starter") as Plan;
   const planLabel = PLAN_LABELS[planKey] || "Starter";
   const planBadgeColor = PLAN_BADGE_COLORS[planKey] || PLAN_BADGE_COLORS.starter;
@@ -178,12 +178,20 @@ export default function Sidebar({ terminology, userRole = "clinician", plan = "s
   }
 
   const sections = navSections
-    .filter(section => !section.roles || section.roles.includes(userRole))
+    .filter(section => {
+      if (section.permissions) return section.permissions.some(p => hasPermission(userRoles, p));
+      if (section.roles) return section.roles.some(r => userRoles.includes(r));
+      return true;
+    })
     .map(section => ({
       ...section,
       label: section.label === "Clients & Intake" ? `${term.plural} & Intake` : section.label,
       items: section.items
-        .filter(item => !item.roles || item.roles.includes(userRole))
+        .filter(item => {
+          if (item.permissions) return item.permissions.some(p => hasPermission(userRoles, p));
+          if (item.roles) return item.roles.some(r => userRoles.includes(r));
+          return true;
+        })
         .map(item =>
           item.href === "/dashboard/clients"
             ? { ...item, label: term.plural }
