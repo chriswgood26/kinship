@@ -220,24 +220,32 @@ export default function Sidebar({ terminology, userRole = "clinician", plan = "s
       onMouseLeave={() => setHovered(false)}
     >
       {/* Logo */}
-      <div className={`border-b border-slate-200 flex items-center justify-between ${isExpanded ? "px-5 py-3" : "px-2 py-3 justify-center"}`}>
+      <div className={`border-b border-slate-200 ${isExpanded ? "px-5 pt-3 pb-2" : "px-2 py-3 flex items-center justify-center"}`}>
         {isExpanded ? (
           <>
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-xs">K</div>
-              <span className="font-bold text-slate-900">Kinship <span className="font-light text-slate-400">EHR</span></span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-xs">K</div>
+                <span className="font-bold text-slate-900">Kinship <span className="font-light text-slate-400">EHR</span></span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={togglePin} title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+                  className="hidden md:block text-slate-400 hover:text-slate-600 transition-colors p-1 rounded">
+                  {pinned ? "📌" : "📍"}
+                </button>
+                <button onClick={() => setMobileOpen(false)}
+                  className="md:hidden text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
+                  aria-label="Close menu">
+                  ✕
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={togglePin} title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-                className="hidden md:block text-slate-400 hover:text-slate-600 transition-colors p-1 rounded">
-                {pinned ? "📌" : "📍"}
-              </button>
-              <button onClick={() => setMobileOpen(false)}
-                className="md:hidden text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
-                aria-label="Close menu">
-                ✕
-              </button>
-            </div>
+            <Link href="/dashboard/admin/settings" className="mt-2 mb-1 inline-flex items-center gap-1.5 group">
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md tracking-wide ${planBadgeColor} group-hover:opacity-80 transition-opacity`}>
+                {planLabel}
+              </span>
+              <span className="text-[10px] text-slate-400 group-hover:text-teal-600 transition-colors">plan ›</span>
+            </Link>
           </>
         ) : (
           <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
