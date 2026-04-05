@@ -74,13 +74,19 @@ export default async function SupervisorPage({
 
   return (
     <div className="space-y-5 max-w-5xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Supervisor Review</h1>
           <p className="text-slate-500 text-sm mt-0.5">
             {supervisees?.length || 0} supervisee{(supervisees?.length || 0) !== 1 ? "s" : ""} · {pendingNotes?.length || 0} notes pending co-signature
           </p>
         </div>
+        <Link
+          href="/dashboard/supervisor/billable-hours"
+          className="bg-teal-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-teal-400 flex items-center gap-2"
+        >
+          ⏱ Billable Hours Dashboard
+        </Link>
       </div>
 
       {/* Supervisees summary */}
