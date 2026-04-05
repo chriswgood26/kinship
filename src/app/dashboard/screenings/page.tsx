@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { PHQ9, GAD7, getSeverity } from "@/lib/screenings";
 import { CSSRS } from "@/lib/cssrs";
 import { AUDIT, DAST10 } from "@/lib/substanceScreenings";
+import { ACE, getACESeverity } from "@/lib/aceScreening";
 import OrgScreeningTrends from "@/components/OrgScreeningTrends";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,9 @@ export default async function ScreeningsPage() {
   const cssrsCount = screenings?.filter(s => s.tool === "cssrs").length || 0;
   const auditCount = screenings?.filter(s => s.tool === "audit").length || 0;
   const dastCount = screenings?.filter(s => s.tool === "dast10").length || 0;
+  const aceCount = screenings?.filter(s => s.tool === "ace").length || 0;
   const siAlerts = screenings?.filter(s => s.tool === "phq9" && (s.answers?.q9 || 0) > 0).length || 0;
+  const aceHighRisk = screenings?.filter(s => s.tool === "ace" && (s.total_score || 0) >= 4).length || 0;
 
   return (
     <div className="space-y-5">
@@ -53,6 +56,10 @@ export default async function ScreeningsPage() {
             className="border border-violet-200 text-violet-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-violet-50 text-sm">
             + DAST-10
           </Link>
+          <Link href="/dashboard/screenings/ace/new"
+            className="border border-rose-200 text-rose-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-rose-50 text-sm">
+            + ACE
+          </Link>
           <Link href="/dashboard/screenings/cssrs/new"
             className="bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-red-400 text-sm">
             + C-SSRS
@@ -66,6 +73,16 @@ export default async function ScreeningsPage() {
           <div>
             <div className="font-semibold text-red-800">Suicidal ideation flagged</div>
             <div className="text-sm text-red-600">{siAlerts} PHQ-9 screening{siAlerts > 1 ? "s have" : " has"} a positive response on question 9 — review immediately</div>
+          </div>
+        </div>
+      )}
+
+      {aceHighRisk > 0 && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <div className="font-semibold text-rose-800">Elevated ACE scores detected</div>
+            <div className="text-sm text-rose-600">{aceHighRisk} ACE screening{aceHighRisk > 1 ? "s have" : " has"} a score ≥ 4 — trauma-specialized assessment and referral recommended</div>
           </div>
         </div>
       )}
@@ -167,6 +184,29 @@ export default async function ScreeningsPage() {
           </Link>
         </div>
 
+        {/* ACE */}
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-5 col-span-2">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="font-bold text-slate-900 text-lg">{ACE.name}</div>
+              <div className="text-sm text-slate-500">{ACE.fullName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-slate-900">{aceCount}</div>
+              <div className="text-xs text-slate-400">completed</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">{ACE.questions.length} questions · Max score {ACE.maxScore} · Trauma-informed care · CDC-Kaiser validated</div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {ACE.severity.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+            ))}
+          </div>
+          <Link href="/dashboard/screenings/ace/new" className="block text-center py-2 rounded-xl text-sm font-semibold bg-rose-600 text-white hover:bg-rose-500 transition-colors">
+            Administer ACE →
+          </Link>
+        </div>
+
         {/* C-SSRS */}
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 col-span-2">
           <div className="flex items-start justify-between mb-3">
@@ -221,10 +261,12 @@ export default async function ScreeningsPage() {
                 const isCSSRS = s.tool === "cssrs";
                 const isAUDIT = s.tool === "audit";
                 const isDAST = s.tool === "dast10";
+                const isACE = s.tool === "ace";
                 const isSubstance = isAUDIT || isDAST;
-                const isStandard = !isCSSRS && !isSubstance;
+                const isStandard = !isCSSRS && !isSubstance && !isACE;
                 const tool = s.tool === "phq9" ? PHQ9 : GAD7;
                 const severity = isStandard ? getSeverity(s.total_score || 0, tool) : null;
+                const aceSeverity = isACE ? getACESeverity(s.total_score || 0) : null;
                 const hasSI = s.tool === "phq9" && (s.answers?.q9 || 0) > 0;
                 const toolBadgeClass: Record<string, string> = {
                   phq9: "bg-blue-100 text-blue-700",
@@ -232,9 +274,10 @@ export default async function ScreeningsPage() {
                   cssrs: "bg-red-100 text-red-700",
                   audit: "bg-amber-100 text-amber-700",
                   dast10: "bg-violet-100 text-violet-700",
+                  ace: "bg-rose-100 text-rose-700",
                 };
                 const toolMaxScore: Record<string, number> = {
-                  phq9: PHQ9.maxScore, gad7: GAD7.maxScore, audit: AUDIT.maxScore, dast10: DAST10.maxScore,
+                  phq9: PHQ9.maxScore, gad7: GAD7.maxScore, audit: AUDIT.maxScore, dast10: DAST10.maxScore, ace: ACE.maxScore,
                 };
                 return (
                   <tr key={s.id} className="hover:bg-slate-50">
@@ -256,7 +299,11 @@ export default async function ScreeningsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      {(isCSSRS || isSubstance) ? (
+                      {isACE ? (
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${aceSeverity?.color}`}>
+                          {aceSeverity?.label || "—"}
+                        </span>
+                      ) : (isCSSRS || isSubstance) ? (
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600`}>
                           {s.severity_label || "—"}
                         </span>
