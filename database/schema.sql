@@ -196,6 +196,24 @@ create table if not exists note_amendments (
 create index if not exists idx_note_amendments_note_id on note_amendments(note_id);
 create index if not exists idx_note_amendments_org on note_amendments(organization_id);
 
+-- Org-configurable encounter / appointment type definitions
+create table if not exists encounter_appointment_types (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade not null,
+  category text not null check (category in ('appointment_client', 'appointment_provider', 'encounter')),
+  name text not null,
+  color text,
+  default_duration_minutes int,
+  is_telehealth boolean default false,
+  sort_order int default 0,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_enc_appt_types_org on encounter_appointment_types(organization_id);
+create index if not exists idx_enc_appt_types_category on encounter_appointment_types(organization_id, category) where is_active = true;
+
 -- Treatment plans
 create table if not exists treatment_plans (
   id uuid primary key default gen_random_uuid(),

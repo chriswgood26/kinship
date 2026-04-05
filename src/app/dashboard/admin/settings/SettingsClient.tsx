@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import StripeConnectButton from "@/components/StripeConnectButton";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 
 interface Org {
@@ -313,6 +314,36 @@ export default function SettingsClient({ org }: Props) {
             {renderField("Appointment Reminder", `${clinicalForm.appointment_reminder} hours prior`)}
           </div>
         )}
+      </div>
+
+      {/* Workflow Configuration */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+          <span className="text-xl">⚙️</span>
+          <h2 className="font-semibold text-slate-900">Workflow Configuration</h2>
+        </div>
+        <div className="divide-y divide-slate-50">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">📋 Encounter &amp; Appointment Types</div>
+              <div className="text-xs text-slate-400 mt-0.5">Define custom type options for scheduling and encounter creation</div>
+            </div>
+            <Link href="/dashboard/admin/encounter-types"
+              className="text-xs text-teal-600 font-semibold border border-teal-200 px-3 py-1.5 rounded-lg hover:bg-teal-50 transition-colors">
+              Configure →
+            </Link>
+          </div>
+          <div className="flex items-center justify-between px-6 py-4">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">🗂 Data Collection Fields</div>
+              <div className="text-xs text-slate-400 mt-0.5">Control which fields are shown, hidden, or required on patient forms</div>
+            </div>
+            <Link href="/dashboard/admin/field-config"
+              className="text-xs text-teal-600 font-semibold border border-teal-200 px-3 py-1.5 rounded-lg hover:bg-teal-50 transition-colors">
+              Configure →
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Billing Settings */}

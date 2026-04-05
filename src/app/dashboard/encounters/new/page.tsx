@@ -6,8 +6,12 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 interface Client { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null; }
+interface EncType { id: string; name: string; is_telehealth: boolean; default_duration_minutes: number | null; }
 
-const ENC_TYPES = ["Individual Therapy", "Group Therapy", "Psychiatric Evaluation", "Psychiatric Follow-up", "Intake Assessment", "Crisis Intervention", "Case Management", "Telehealth"];
+const DEFAULT_ENC_TYPES = [
+  "Individual Therapy", "Group Therapy", "Psychiatric Evaluation", "Psychiatric Follow-up",
+  "Intake Assessment", "Crisis Intervention", "Case Management", "Telehealth",
+];
 
 function NewEncounterForm() {
   const router = useRouter();
@@ -16,12 +20,28 @@ function NewEncounterForm() {
   const [error, setError] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState("");
+  const [customEncTypes, setCustomEncTypes] = useState<EncType[]>([]);
 
   const [form, setForm] = useState({
     client_id: params.get("client_id") || "", client_name: "",
     encounter_date: new Date().toISOString().split("T")[0],
     encounter_type: "Individual Therapy", chief_complaint: "",
   });
+
+  // Load custom encounter types
+  useEffect(() => {
+    fetch("/api/encounter-appointment-types?category=encounter", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        const types: EncType[] = d.types || [];
+        setCustomEncTypes(types);
+        // Update default type if custom types are configured
+        if (types.length > 0) {
+          setForm(f => ({ ...f, encounter_type: types[0].name }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const cid = params.get("client_id");
@@ -39,6 +59,11 @@ function NewEncounterForm() {
         .then(r => r.json()).then(d => setClients(d.clients || []));
     } else setClients([]);
   }, [clientSearch]);
+
+  // Use custom types if configured, otherwise fall back to defaults
+  const encTypeNames = customEncTypes.length > 0
+    ? customEncTypes.map(t => t.name)
+    : DEFAULT_ENC_TYPES;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,7 +118,7 @@ function NewEncounterForm() {
         <div className="grid grid-cols-2 gap-4">
           <div><label className={labelClass}>Encounter Type</label>
             <select value={form.encounter_type} onChange={e => setForm(f => ({ ...f, encounter_type: e.target.value }))} className={inputClass}>
-              {ENC_TYPES.map(t => <option key={t}>{t}</option>)}
+              {encTypeNames.map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <div><label className={labelClass}>Date</label>

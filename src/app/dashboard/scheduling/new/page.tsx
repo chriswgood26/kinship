@@ -7,15 +7,16 @@ import { Suspense } from "react";
 
 interface Client { id: string; first_name: string; last_name: string; mrn: string | null; preferred_name?: string | null; }
 interface Provider { id: string; first_name: string; last_name: string; title?: string | null; role?: string | null; }
+interface ApptType { id: string; name: string; is_telehealth: boolean; default_duration_minutes: number | null; }
 
-const CLIENT_APPT_TYPES = [
+const DEFAULT_CLIENT_APPT_TYPES = [
   "Individual Therapy", "Psychiatric Evaluation", "Psychiatric Follow-up",
   "Group Therapy", "Intake Assessment", "Crisis Intervention",
   "Case Management", "Medication Management",
   "Telehealth - Individual", "Telehealth - Group", "Telehealth - Psychiatric",
 ];
 
-const PROVIDER_ONLY_TYPES = [
+const DEFAULT_PROVIDER_ONLY_TYPES = [
   "Block Time", "Staff Meeting", "Training", "Administrative", "Lunch Break",
   "Supervision", "Team Huddle", "Documentation Time", "Other",
 ];
@@ -39,6 +40,8 @@ function NewAppointmentForm() {
   const [clientSearch, setClientSearch] = useState("");
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isProviderOnly, setIsProviderOnly] = useState(false);
+  const [customClientTypes, setCustomClientTypes] = useState<ApptType[]>([]);
+  const [customProviderTypes, setCustomProviderTypes] = useState<ApptType[]>([]);
 
   const timeParam = params.get("time") || "09:00";
   const requestId = params.get("request_id") || "";
@@ -52,11 +55,20 @@ function NewAppointmentForm() {
     recurrence_rule: "", recurrence_end_date: "",
   });
 
-  // Load providers
+  // Load providers and custom appointment types
   useEffect(() => {
     fetch("/api/org-users", { credentials: "include" })
       .then(r => r.json())
       .then(d => setProviders(d.users || []));
+
+    // Load custom types for both categories
+    Promise.all([
+      fetch("/api/encounter-appointment-types?category=appointment_client", { credentials: "include" }).then(r => r.json()),
+      fetch("/api/encounter-appointment-types?category=appointment_provider", { credentials: "include" }).then(r => r.json()),
+    ]).then(([clientData, providerData]) => {
+      setCustomClientTypes(clientData.types || []);
+      setCustomProviderTypes(providerData.types || []);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -79,18 +91,29 @@ function NewAppointmentForm() {
   // Switch appointment type list when toggling provider-only
   useEffect(() => {
     if (isProviderOnly) {
-      setForm(f => ({ ...f, appointment_type: "Block Time", client_id: "", client_name: "" }));
+      const defaultProviderType = customProviderTypes.length > 0 ? customProviderTypes[0].name : "Block Time";
+      setForm(f => ({ ...f, appointment_type: defaultProviderType, client_id: "", client_name: "" }));
       setClientSearch("");
       setClients([]);
     } else {
-      setForm(f => ({ ...f, appointment_type: "Individual Therapy" }));
+      const defaultClientType = customClientTypes.length > 0 ? customClientTypes[0].name : "Individual Therapy";
+      setForm(f => ({ ...f, appointment_type: defaultClientType }));
     }
-  }, [isProviderOnly]);
+  }, [isProviderOnly, customClientTypes, customProviderTypes]);
 
   const set = (k: string, v: string | number | boolean) => setForm(f => ({ ...f, [k]: v }));
 
-  const isTelehealthType = form.appointment_type.toLowerCase().includes("telehealth");
-  const apptTypes = isProviderOnly ? PROVIDER_ONLY_TYPES : CLIENT_APPT_TYPES;
+  const isTelehealthType = form.appointment_type.toLowerCase().includes("telehealth") ||
+    customClientTypes.find(t => t.name === form.appointment_type)?.is_telehealth === true;
+
+  // Use custom types if configured, otherwise fall back to defaults
+  const clientTypeNames = customClientTypes.length > 0
+    ? customClientTypes.map(t => t.name)
+    : DEFAULT_CLIENT_APPT_TYPES;
+  const providerTypeNames = customProviderTypes.length > 0
+    ? customProviderTypes.map(t => t.name)
+    : DEFAULT_PROVIDER_ONLY_TYPES;
+  const apptTypes = isProviderOnly ? providerTypeNames : clientTypeNames;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
